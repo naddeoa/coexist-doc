@@ -1,0 +1,130 @@
+\documentclass[journal]{IEEEtran}
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+
+%-------------------------------------------------------
+\begin{document}
+\title{This is the title}
+\author{Anthony Naddeo}
+
+\maketitle
+
+
+\begin{abstract}
+The abstract goes here.
+\end{abstract}
+
+\begin{IEEEkeywords}
+IEEEtran, journal, \LaTeX, paper, template.
+\end{IEEEkeywords}
+
+
+\IEEEpeerreviewmaketitle
+
+
+%--------------------------------------------------------
+\section{Introduction} \label{sec:intro}
+%--------------------------------------------------------
+
+
+
+
+
+%--------------------------------------------------------
+\section{API} \label{sec:}
+%--------------------------------------------------------
+
+
+\begin{itemize}
+\item Schemas are stored in plain .sql files and parsed out by php classes. 
+\item /lib/sqlite/1/schema.sql contains version 1 of the database in sqlite syntax for clients to build.
+\item Errors handled by an error class that use Response children to send to the client. This is how useful error messages are relayed to the client.
+\item Responders make responses for requests.
+\item All code kept out of htdocs root
+\item public php pages just pass \$\_GET along to appropriate responders.
+\item Singletons are hard in android; you always need a context to do anything useful. Redesign is eminent 
+\item Design pattern, chain of rseponsibility for services; each one downloads their thing and starts the next.
+\end{itemize}
+
+
+%--------------------------------------------------------
+\section{defined json fields} \label{sec:}
+%--------------------------------------------------------
+
+Create
+forms      :  An array of forms
+
+
+Form
+label      : A string for displaying. This should be a pretty version of the table that this form represents.
+table      : The table that this form is associated with.
+fields     : array of Field objects.
+
+
+Field
+label      : A string for displaying. This should be a pretty version of the column that this field represents.
+type       : The data type that this field will be taking. See "Field types" for more info.
+column     : The column that this field is associated with.
+required   : Whether or not this field is mandatory when posting updates.
+references : The table.column that this field references. Applies to fields with types of "reference".
+
+Reference
+table      : The name of the table that this points to.
+column     : The name of the column that this points to.
+
+
+Types
+string     : A string.
+int        : An integer.
+float      : a float.
+date       : A date; i.e. 07/05/1989
+boolean    : A boolean. This may appear on the client as a checkbox.
+barcode    : A string field that supports importing values from scanned barcodes.
+reference  : Effectively an enum type, where the options are chosen from the referenced tabel.
+
+
+
+%--------------------------------------------------------
+\section{todo} \label{sec:}
+%--------------------------------------------------------
+  * implement field types factory pattern.
+  * make Add work
+ 
+
+
+
+%--------------------------------------------------------
+\section{things that need to be customized before use} \label{sec:}
+%--------------------------------------------------------
+Resource strings
+  * for database file location.
+  * notification title
+  * api base url
+  * service descriptions maybe?
+  * activity title
+  * app name
+  * debugging class tag
+
+PHP
+  * config path in Config.php
+  * require_once file path
+  * conf/conf.ini
+
+
+%--------------------------------------------------------
+\section{How-to setup} \label{sec:}
+%--------------------------------------------------------
+
+  * 
+
+
+
+
+%-------------------------------------------------------
+% Bibliography
+%-------------------------------------------------------
+\bibliographystyle{IEEEtran}
+\bibliography{report}
+\end{document}
+
+
