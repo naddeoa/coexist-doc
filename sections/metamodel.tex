@@ -1,0 +1,409 @@
+%--------------------------------------------------------
+\section{Designing a Metamodel} \label{sec:metamodel}
+%--------------------------------------------------------
+
+
+%--------------------------------------------------------
+\subsection{XML Meta Model}  \label{sec:xml}
+
+A \textit{meta model} is a model of a meta data. Giulieri defined the meta data
+(in this context) as ``the meaningful information necessary to fully describe
+the UI and database mapping''. In this section, we analyze a representative
+sample of one of Evolutility's XML meta models and explain the perceived
+reasoning behind its design. Understanding this XML meta model will make the
+design of the JSON version in Section~\ref{sec:json} clearer.
+Figure~\ref{fig:xml} contains the XML meta model sample.
+
+\begin{figure}[h!]
+\centering
+
+\begin{lstlisting}[language=XML]
+<?xml version="1.0" encoding="UTF-8"?>
+<form label="To Do"  
+      xmlns="http://www.evolutility.com">
+  <data entity="task" entities="tasks" 
+        icon="m-todo.gif" dbtable="EVOL_ToDo" 
+        dborder="PriorityID, duedate" />
+  <panel label="Task" width="62" >
+    <field type="text" label="Title" 
+      dbcolumn="title"
+      required="1" cssclass="fieldmain" 
+      maxlength="255" width="100" 
+      search="1" searchlist="1" searchadv="1" />
+    <field type="date" label="Due Date" 
+      dbcolumn="duedate" 
+      maxlength="10" width="40" 
+      search="1" searchlist="1" searchadv="1" />
+  </panel>
+</form> 
+\end{lstlisting}
+\caption{Sample Evolutility XML meta model}
+\label{fig:xml}
+\end{figure}
+
+Looking at the XML model it is obvious that the structure is designed around the
+user interface. This is noteworthy because the typical approach to
+relational-database-backed applications is encumbered by the object-relational
+impedance mismatch. When representing data in an object oriented language, one
+must agree upon a mapping from the relational database. Technologies like the
+Java Persistence API have attempted to solve this problem by allowing
+programmers to implicitly specify an object mapping when creating objects in
+code\cite{oracle_java_????}, but the approach presented in this section
+effectively side steps the issue by mapping the database directly to UI forms,
+where an obvious mapping \textit{does} exist.
+
+With this in mind, it becomes easier to understand the semantics of the model.
+The root element is a \texttt{form}, inside of which are \texttt{data} and
+\texttt{panel} nodes. This information represents the structure of a \textit{ui
+form}, or a section of a graphical user interface that is dedicated to user
+input (like any paper form you may have encountered). The \texttt{field} nodes
+are the nodes that model the actual data in the database. These are grouped
+under \texttt{panel}s to represent sections of the UI, implemented, perhaps,
+using tabs. Each \texttt{field} contains attributes that specify certain
+database related attributes. A full list of attributes can be found on the
+original Evolutility submission page\cite{giulieri_minimalist_2011}.
+
+\begin{itemize}
+\item \textbf{\texttt{dbcolumn}}: The name of the column that this field represents. The name of the table is given in the \texttt{data} node. Each form ultimately models a table in the database.
+\item \textbf{\texttt{label}}: A string that will represent this field in the UI.
+\item \textbf{\texttt{type}}: The type of this field. Field types are not analogous with database types.
+\item \textbf{\texttt{maxlength}}: Some UI metadata to allow visual customization. 
+\item \textbf{\texttt{width}}: Similar to maxlength.
+\item \textbf{\texttt{search}}: Specifies whether or not this field should appear in a search form. This allows users to hide fields that get auto populated from triggers.
+\end{itemize}
+
+Using this model, Evolutility generates Web UI forms at run time. This means
+that no code has to be written for the developer to configure and change the
+applications functionality and appearance. 
+
+The distinction between form types and database types is a flexible concept that
+enables additional UI functionality without jeopardizing the mapping between the
+database and UI. 
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance = 2.5cm, auto, scale=.7, every node/.style={transform shape}]
+  % Place nodes
+  \node [block] (varchar) {varchar};
+  \node [cloud, below of=varchar] (email) {email};
+  \node [cloud, left of=email] (text) {text};
+  \node [cloud, right of=email] (textm) {textmultiline};
+  % Draw edges
+  \path[line] (email) -- (varchar);
+  \path[line] (text) -- (varchar);
+  \path[line] (textm) -- (varchar);
+
+\end{tikzpicture}
+\caption{UI forms that map to the SQL \texttt{varchar} type.}
+\label{fig:varchar_map}
+\end{figure}
+
+Figure~\ref{fig:varchar_map} shows the general relationship between UI types
+(shown in red) and SQL types (shown in blue). There are generally a number of UI
+types that map to a single database type. The difference between any two UI
+types that map to the same database type lie in their functionality. For
+example, the \texttt{text} UI type will cause fields to be presented as a single
+line of text, the \texttt{textmultiline} type will cause a fields to appear as
+text boxes, and the \texttt{email} type will cause fields to appear as a single
+line of text and enforce email style validation. 
+
+
+
+
+%--------------------------------------------------------
+\subsection{JSON Metamodel} \label{sec:json}
+
+In this section, we examine the shortcomings of Evolutility and introduce a JSON
+model that is equivalent to the XML model of Section~\ref{sec:xml}. 
+
+
+
+\begin{figure}[h!]
+\begin{lstlisting}[language=json]
+{
+  "forms" : [
+  {
+    "label":"RMA",
+    "table":"RMA",
+    "fields": [
+      {"label":"RMA Number","type":"barcode",
+         "column":"rma_no"},
+      {"label":"Sent","type":"date",
+         "column":"sent"},
+      {"label":"Returned","type":"text",
+         "column":"returned"},
+      {"label":"Note","type":"text",
+         "column":"note"},
+      {"label":"Serial","type":"reference",
+       "column":"serial_no","required":true,
+       "references":{
+         "table":"Devices",
+         "column":"serial_no"
+    }}
+    ]
+  }
+  ]
+}
+\end{lstlisting}
+\caption{Sample JSON meta model.}
+\label{fig:json_sample}
+\end{figure}
+
+The general form of the model is similar Evolutility's XML version. The first
+attribute in the object is \texttt{form}, which references an array of forms.
+Each form contains attributes that specify the database-UI mapping and UI
+metadata. The \texttt{label} and \texttt{table} of forms represent the title and
+the database table that it models, and the \texttt{fields} array contains
+\texttt{field} objects that model the actual data. The approach to
+\texttt{fields} has been altered and expanded. In the XML model, a foreign key
+was modeled as \texttt{lov} type (list of values). It would use integer primary
+keys to identify valid values in other tables. In Coexist, that type has been
+changed to the \texttt{reference} type, and an additional \texttt{references}
+attribute has been added to model the foreign key relationship, relieving the
+integer primary key requirement. In Figure~\ref{fig:json_sample}, the column
+\texttt{serial\_no} of table \texttt{RMA} is a foreign key on the
+\texttt{serial\_no} column in the \texttt{Devices} table. 
+
+Since Coexist was designed with mobile clients in mind, there have been several
+UI types added to take advantage of smart phone functionality. The
+\texttt{barcode} type is the same as a \texttt{text} type, except it causes a
+barcode to appear on the right of it, allowing users to get input from a barcode
+using a smart phone's camera. The \texttt{image} type has been updated from
+Evolutility in this same fashion; it now presents a camera icon that allows
+users to receive input from a camera, ultimately mapping to a SQL \texttt{blob}
+type. The \texttt{location} data type allows users to use GPS as input, storing
+latitude and longitude information as a SQL \texttt{varchar} type\footnote{Many
+DBMSs provide types specifically for storing spatial data, but remaining DBMS
+independent and keeping restrictions low is currently prioritized higher.}. 
+
+
+
+
+
+%--------------------------------------------------------
+%\newcommand{\sql}[1]{\texttt{#1\textsubscript{sql}}}
+%\newcommand{\mm}[1]{\texttt{#1\textsubscript{mm}}}
+\newcommand{\sql}[1]{\texttt{$#1_{sql}$}}
+\newcommand{\mm}[1]{\texttt{$#1_{mm}$}}
+\subsection{Creating individual metamodels}  \label{sec:}
+
+Having a JSON metamodel solves the problem of mapping database information onto
+the user interface, but it introduces a new component that users will have some
+responsibility for maintaining. Crafting small metamodels by hand is at best
+time-consuming, but it becomes increasingly daunting as the size of database
+schemas increase.  This section will introduce a program, modelgen (metamodel
+generator), that mitigates this overhead for users, and discuss the reasoning
+for its design.
+
+Since the metamodel encapsulates the database schema, modelgen can either take
+a metamodel and map it to SQL, or vice versa. Before choosing, we must
+understand the actual mapping between the Coexist JSON metamodel and SQL,
+starting with mapping SQL to the metamodel. Figure~\ref{fig:metamodel_sql}
+contains three sample of semantically equivalent SQL. The first and second
+samples are typical of how a human would write SQL, while the third is more
+likely to come from tools like mysqldump. None the less, there is no guarantee
+about which sample modelgen will be asked to convert.
+
+\begin{figure}[h!]
+\begin{lstlisting}[language=sql]
+-- First sample
+CREATE TABLE Enrolled (
+  id INTEGER REFERENCES Students(id));
+
+-- Second sample
+CREATE TABLE Enrolled (
+  id INTEGER
+  CONSTRAINT fk FOREIGN KEY REFERENCES Students(id));
+
+-- Third sample
+CREATE TABLE Enrolled ( id INTEGER );
+ALTER TABLE Enrolled
+  ADD CONSTRAINT fk FOREIGN KEY (id) REFERENCES Students;
+\end{lstlisting}
+\caption{Three samples of SQL that are semantically equivalent. They will need
+to be represented in the metamodel as JSON.}
+\label{fig:metamodel_sql}
+\end{figure}
+
+The equivalence of the three SQL samples implies that modelgen would be a
+many-to-one function if it took SQL and produced a metamodel.
+Figure~\ref{fig:metamodel_json_convert1} shows the relevant portion of the
+metamodel that would represent each of the three SQL samples.
+
+\begin{figure}[h!]
+\begin{lstlisting}[language=json]
+{
+  "label":"Enrolled",
+  "table":"Enrolled",
+  "fields": [
+    {"label":"Serial",
+     "column":"serial_no",
+     "type":"reference",
+     "references":{
+       "table":"Students",
+       "column":"id"}}
+  ]
+}
+\end{lstlisting}
+\caption{A single field in the metamodel that equally represents all three
+samples in Figure~\ref{fig:metamodel_sql}.}
+\label{fig:metamodel_json_convert1}
+\end{figure}
+
+Designing modelgen to take SQL and produce a metamodel poses several problems.
+This section will reference SQL and metamodel types repeatedly, so as shorthand,
+a SQL integer type will be written as \sql{integer}, and a metamodel integer
+type will be written as \mm{integer}.
+
+
+%--------------------------------------------------------
+%\subsubsection{$f : type_{SQL} \rightarrow type_{metamodel}$ is not surjective}
+\subsubsection{Mapping SQL types to metamodel types is not surjective}
+\label{sec:metamodel_issue1}
+
+The mapping from SQL syntax to metamodel syntax is surjective, but the
+mapping from SQL types to metamodel types is not. For example, \var{id} in
+Figure~\ref{fig:metamodel_sql} is a \sql{integer}, but the metamodel defines
+\mm{integer}, and \mm{barcode}, the latter of which is essentially an
+\mm{integer}, but allows clients to present a barcode scanner for user input (if
+they support it). This means that modelgen would have to default the conversion
+from \sql{integer} to \mm{integer}, and it would never produce a metamodel with
+a \mm{barcode} in it. A similar situation occurs when converting a
+\sql{varchar}; it can be represented as a \mm{text}, \mm{email}, or
+\mm{textbox}.
+
+
+%--------------------------------------------------------
+\subsubsection{Metamodels represent more than SQL}  \label{sec:}
+
+%If there are two functions, $f$ and $g$, and a metamodel, $M1$, then
+%\[
+%f : SQL \rightarrow metamodel
+%\]
+%\[
+%g: metamodel \rightarrow SQL
+%\]
+%\[
+%f(g(M1)) \neq M1
+%\]
+
+Given a function $(f:SQL \rightarrow metamodel)$ and \mbox{$(g:metamodel
+\rightarrow SQL)$}, and a metamodel $M1$, $f(g(M1)) \neq M1$.
+This is because the metamodel contains information that cannot be
+represented in SQL, like the \var{label} field, which is used for display
+purposes in client applications. Given the metamodel in
+Figure~\ref{fig:metamodel_json_convert1}, if we
+\begin{inparaenum}
+\item change the first \var{label} property to \var{``All enrolled''},
+\item convert it into SQL, and
+\item convert it back into a metamodel,
+\end{inparaenum}
+the value of the \var{label} will be lost (defaulted to the value of the table
+name), because SQL says nothing about how the data should be displayed in
+applications. When converting from SQL, it is likely that a
+user will be required to hand edit the metamodel and insert values for fields
+like \var{label}.
+
+In summary, the two largest issues with mapping SQL to metamodels is a lossy,
+many-to-one syntax-translation and an injective, non-surjective type-translation.
+Both of these issues imply that going in the reverse direction is more
+favorable. There are a few stipulations, namely that 
+\begin{inparaenum} 
+\item one of the many possible SQL translations needs to be chosen and
+\item the metamodel has to be able to represent some database related information
+like primary and foreign keys.
+\end{inparaenum}
+
+Much like in Figure~\ref{fig:metamodel_sql}, we only consider different SQL
+options that are semantically equivalent to each other and accurately represent
+the metamodel being translated. Specifying that the SQL under consideration must
+be equivalent with each other is important because it is possible to have two
+different SQL statements that represent the same metamodel, but are not
+technically equivalent with each other. For example, adding \var{ENGINE=InnoDB}
+to sample 1 from Figure~\ref{fig:metamodel_sql} has implications on the
+database, but it wouldn't change the semantics of the SQL as far as the
+metamodel is concerned. To deal with this, we will only consider minimal SQL
+samples, or samples of SQL that are all equivalent and don't have any additional
+non-semantic parts. This usually means that we will disregard DBMS specific
+features.
+
+Since we only consider semantically equivalent SQL, any SQL chosen will work.
+As a sort of tie-breaker, the SQL that makes the user's experience more
+convenient will be selected. Of the three samples in Figure~\ref{fig:metamodel_sql},
+sample 1 is the most simple. However, sample 2 has a significant functional advantage
+over sample 1: its foreign key can be deleted because it has a name. So of the
+three samples, sample 2 seems to be the best choice, and a similar reasoning
+will be applied to other cases. There are several advantages to mapping
+metamodels to SQL as well. Specifically, mapping in this direction allows
+Coexist to do two things.
+
+
+%--------------------------------------------------------
+\setcounter{subsubsection}{0}
+\subsubsection{Handle clients of any DBMS} \label{sec:mm_advantage}
+
+Originally, users would have to create SQL schemas for every type of DBMS that
+they intended to use on clients. If a user chose MySQL for the central server's
+DBMS, and only Android clients were going to be used, then that user would have
+to store a SQLite compatible version of the MySQL schema on the server so that
+clients could build a local version of the central database.
+
+If modelgen can generate schemas from metamodels then users no longer have to
+store copies of SQL schemas in different DBMS-compatible forms for
+clients. Figure~\ref{fig:modelgen_flow} depicts the dialog between a coexist
+client and server, where the client requests the schema it should use for its
+local storage.
+
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance = 2.5cm, auto, scale=.7, every node/.style={transform shape}]
+  % Place nodes
+  \node [block] (client) {client};
+  \node [block, right of=client, node distance=6cm] (server) {server};
+  
+  \node [dot, below of=client, label=180:1] (c1) {};
+  \node [dot, below of=server] (s1) {};
+
+  \node [dot, below of=c1, label=180:2] (c2) {};
+  \node [dot, below of=s1] (s2) {};
+  
+
+  \path [line] (c1) -- node [above, align=left] {
+    \tt\textbf{GET /api/sync} \\ 
+    \tt db:sqlite}   (s1);
+
+
+  \path [line] (s2) -- node [above, align=left] {
+    \tt\textbf{200 OK} \\ 
+    \tt db:<schema>}   (c2);
+
+
+  \path [edge]  (client) -- node  {} (c1);
+  \path [edge]  (server) -- node  {} (s1);
+  
+  \path [edge]  (c1) -- node [above] {} (c2);
+  \path [edge]  (s1) -- node [right, align=left] {
+    \tt  <schema> = \\
+    \tt modelgen(model,sqlite)}   (s2);
+
+\end{tikzpicture}
+\caption{A dialog between a Coexist client and server where the client requests
+the schema it should use for local storage.}
+\label{fig:modelgen_flow}
+\end{figure}
+
+Figure~\ref{fig:modelgen_flow} starts at step 1, where the client requests the
+schema it should be using for its local storage. The server then generates the
+schema in a SQLite compatible form and returns it to the client in step 2. The
+relationship between the client and server is explored in more detail in
+Section~\ref{sec:db}.
+
+
+
+%--------------------------------------------------------
+\subsubsection{Add metacolumns to the schema} \label{sec:mm_advantage}
+
+
+
+

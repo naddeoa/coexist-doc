@@ -1,0 +1,220 @@
+%--------------------------------------------------------
+\section{Introduction} \label{sec:intro}
+%--------------------------------------------------------
+
+
+The term CRUD refers to the four basic operations on persistent storage: create,
+read, update and delete. Many CRUD focused applications implement their
+persistence layers using relational databases. Of these applications, many
+require multiple users to be able to perform CRUD operations on the same
+database\footnote{give an example} from arbitrary client types (Android, Web
+etc.). The data managed by CRUD applications varies greatly, but functionality
+and user interfaces are largely the same across instances. For this reason,
+there have been many frameworks that aid developers in creating their own CRUD
+applications, but most of them require the programmer to write code (i.e. PHP or
+Java) in order to generate entire applications that can be installed or placed
+on a Web server; this quickly complicates an otherwise simple application. 
+
+The use of a framework should be a categorically simpler experience than
+building a CRUD application from scratch. Currently, the framework that best
+meets this requirement is called Evolutility. Evolutility
+is effective because the programmer only has to create XML configuration files
+that describe UI forms that are generated at run time. This approach results in
+a generic application that can be configured to display any type of data without
+needing to edit the source. That being said, the project has some shortcomings,
+particularly in its lack of native mobile application support (Android
+specifically) and its dependency on proprietary Microsoft technology (as opposed
+to open standards like Apache, PHP and MySQL). 
+
+In this paper, we expand the generic CRUD application model described by
+Giulieri\footnote{cite} to enable arbitrary client types and support mobile
+clients by adding features like database replication for off line reading. This
+project was originally an inventory application designed for Networkmaine, the
+Internet service provider (ISP) for the public schools and libraries of Maine.
+
+
+%--------------------------------------------------------
+\subsection{Motivating Examples} \label{sec:motivation}
+%--------------------------------------------------------
+
+In this section, we provide examples that illustrate the initial constraints
+ for this project.
+
+%--------------------------------------------------------
+\subsubsection{Mobile phones are often off line}  \label{sec:offline}
+
+Libraries often cannot afford dedicated technical staff. When equipment breaks,
+an employee of Networkmaine is likely to be dispatched to the site to install a
+replacement. The equipment at libraries is commonly stored in the basements
+where little-to-no wifi or mobile signal can reach. If the staff member does not
+know which of the two router ports should provide the site with internet, then,
+regardless of signal, they should be able to use their mobile device to retrieve
+that information.
+
+
+
+%--------------------------------------------------------
+\subsubsection{Some users will only use browsers}  \label{sec:browser}
+
+There are many network tools that are available exclusively through browsers at
+Networkmaine. Mobile applications will have to coexist in the same system as Web
+and desktop based applications.
+
+
+%--------------------------------------------------------
+\subsubsection{The database schema is likely to change over time}
+\label{sec:change}
+
+Most of the technical employees at Networkmaine are network engineers; very few
+of them are even familiar with Android development. All application maintenance
+will ultimately fall on the shoulders of someone who would rather being doing
+something else. It is reasonable to assume that they might need to start
+tracking other device types, or additional dates at some point in time. Changes
+of this sort should not require recompilation of the application or any source
+code modification.
+
+
+%--------------------------------------------------------
+\subsubsection{Entirely separate applications will eventually be needed}
+\label{sec:deployable}
+
+It is also reasonable to assume that Networkmaine may have a need to track
+something entirely unrelated to networking devices (enrollment information
+perhaps). Additional instances of CRUD applications should be easy to configure
+and deploy.
+
+
+%--------------------------------------------------------
+\subsection{Overview}  \label{sec:overview}
+
+% describe the structure of this project, what was used. The user should not be surprised by any of the following main sections after this section. He should expect a "Mirror method / Sync" section, "JSON ui form model" section, etc.
+
+% explain server setup
+
+% explain server side technologies
+
+% explain android client setup
+% explain android client dependencies 
+
+% explain JSON stuff based on evolutility
+
+
+We are interested in creating a generic CRUD system that shares a single database among arbitrary amounts (and types) of clients. In order to be effective, it must 
+\begin{inparaenum}
+\item be easier to use than creating a CRUD application,
+\item allow off line reading on mobile clients,
+\item have easily deployable instances for different databases and
+\item never require source code modification for updates\footnote{Bugs in the source code will clearly require more traditional updates, but clients should adapt to the addition of tables or columns to the database.}.
+\end{inparaenum}
+In order to meet these requirements, we must have a way of replicating databases across arbitrary DBMS, isolate the parts of application instances that need to be customized (i.e. name and icon), and describe the UI enough for clients to display lists and forms that enable CRUD operations. Giulieri summarized his efforts well in his entry into the Code Generator 2008 Competition\cite{giulieri_minimalist_2011}
+\begin{quotation}
+``We argue that the key concept here is the representation of UI Metadata and that with a proper set of fundamental UI widgets, most CRUD applications can be effectively designed without hand coding.''
+\end{quotation}
+We use Giulieri's Evolutility\cite{giulieri_evolutility_????} project as a starting point. Evolutility consists of various .aspx pages and dlls that need to be copied to a Web server, along with some SQL scripts that need to be run to create tables that store meta data. Once the initial configuration is done, an XML file can be created that specifies the relation between fields on forms and entities in the database. The XML file format is specified in his Code Generator 2008 Competition entry\cite{giulieri_minimalist_2011}. 
+
+In our project, \texttt{Coexist}, we use different technologies. One of
+the goals of our project is to be more accessible than Evolutility by using open
+and free (as in money) software when possible; consequently, Coexist uses a
+typical LAMP stack for the server, instead of ASP.NET and SQL Server.
+
+We use JSON instead of XML for the model. The framework is designed in such a
+way that XML support can be added in the future, but JSON will be supported from
+the start. The same XML data can usually be represented with fewer bytes in JSON
+and can also be easier to hand edit. In addition, we already had experience with
+Google's Gson library and there were no significant reasons to prefer XML.
+
+As mentioned, the server side code is written in PHP and is designed as an API.
+The API exposes four resources to clients, each one fulfilling a particular
+responsibility.
+
+\begin{itemize}
+\item \textbf{/api/sync}: Provides clients with the rows of the database that they are missing based on timestamp information.
+\item \textbf{/api/schema}: Sends SQL to the client that creates the necessary tables on its local database. The DBMS type must be supplied in requests (i.e. SQLite).
+\item \textbf{/api/crud}: Sends the JSON model to the client so that it can create UI forms.
+\item \textbf{/api/create}: Creates or updates rows on the server. These rows are retrievable through calls to /api/sync.
+\end{itemize}
+
+An Android client implementation has also been provided. It uses the recommended
+Java based tools from Google, as well as the Android Support library and the
+ActionbarSherlock library\cite{wharton_actionbarsherlock_????} for backwards
+compatibility. At the moment, these dependencies are required in order to
+produce a viable client, though this may change as older versions of Android are
+aged out. Using third party libraries can be risky at times, but even Google
+seems to have made use of ActionbarSherlock in their own
+applications\cite{google_baseactivity.java_????}.
+
+For the database replication we require a server side DBMS that supports
+triggers (MySQL, PostgreSQL, etc.). The replication utilizes timestamps to
+synchronize clients. Since one of our goals is full off line readability,
+Coexist is most suitable for smaller sized databases (the entire database will
+be replicated on the client's internal storage).
+
+
+%--------------------------------------------------------
+\subsection{Related Works} \label{sec:related}
+% talk about what people are doing to solve this at the moment
+
+Evolutility\cite{giulieri_evolutility_????} was by far the closest match to what
+we were trying to do, but before finding it there were several other projects
+that were encountered and rejected for various reasons. Android Crud Code
+Generator (ACCG)\cite{popovski_android-crud-code-generator_????} and
+Phreeze\cite{hinkle_phreeze_????} are representative of the kinds of projects
+that we were finding. The first is targeted at Android and the second is PHP,
+but both of them aim to make the CRUD experience simpler. Phreeze is a polished
+application, but it requires users to write code during the "development"
+process, which violated our requirements. ACCG took a different approach. It
+generates all of the Java code that would be needed when making a CRUD
+application. This is similar from a user perspective, but we ultimately want to
+have one code base that never has to be modified; not to mention, it is strictly
+local storage. OpenMobster's CRUD
+Tutorial\cite{openmobster_mobilizehibernate_????} introduced us to the Hibernate
+framework\cite{jboss_community_hibernate_????} for object relational mapping.
+This is a mature framework that enables transparent persistence of Java objects.
+This violates our goal of minimizing requirements, as well as requiring code to
+be written; non the less, it is an impressive and interesting framework. 
+
+
+%% fix formatting for its new context
+In the realm of database replication, we considered an interesting solution from
+fyreCloud's Amsler project. It was designed with Android in mind, attempting to
+mediate the MySQL replication protocol to make it compatible with
+SQLite\cite{fyrecloud_solutions_fyrecloud_????}. The actions of the Amsler
+project can be summarized as follows.
+
+\begin{enumerate}
+\item Configure the MySQL back end for data replication as described by the MySQL manual. 
+\item Use TCP/IP connections to continuously push changes to the client in the form of MySQL commands.
+\item Use a lexer and parser to map the incoming MySQL queries to valid SQLite queries. 
+\end{enumerate}
+
+Step 3 was troublesome; the syntax of different SQL implementations has many
+subtle differences. The idea of having a limited set of queries (dictated by the
+Amsler project's progress) that we could use on the server was an unnecessary
+burden.
+
+
+%% fix formatting
+The popular client authentication method today is the OAuth
+library\cite{_oauth_????} used by Facebook, Twitter and LinkedIn to name a few.
+The idea is to use authentication tokens in place of passwords so that third
+party applications can access someone's information by making requests with
+tokens instead of passwords. For the purposes of Networkmaine, there will be no
+third party plug in service and all users access the same information over SSL.
+Storing local password hashes or requesting passwords per transaction (depending
+on us
+
+%--------------------------------------------------------
+\subsection{Outline of Paper} \label{sec:outline}
+
+
+The remainder of this paper is organized as follows. Section~\ref{sec:xml}
+reviews the XML-based meta-model presented by Giulieri and
+Section~\ref{sec:json} introduces the JSON version of it used by Coexist.
+Section~\ref{sec:db} describes the protocol used to enable database replication
+across arbitrary DBMSs. In Section~\ref{sec:api}, we take a closer look at the
+structure of the Web server and API, and what interaction with clients will look
+like. Section~\ref{sec:deployment} examines the system as a whole from the end
+user's perspective. It will also detail the work involved with customizing an
+Coexist instance and deploying it. We conclude in Section~\ref{sec:conclusion}.
+
+

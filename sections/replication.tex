@@ -1,0 +1,318 @@
+%--------------------------------------------------------
+\section{Database Replication} \label{sec:replication}
+%--------------------------------------------------------
+
+
+%Many database systems support mirroring, or data replication. The driving factor
+%in this technology seems to be data availability: always having a slave database
+%server that can assume the primary role in the event that something goes
+%wrong\cite{microsoft_database_????}. The issue here is that we don't have much
+%control over the development environment; the server side database is MySQL
+%because that is what the staff is familiar with and the client side database is
+%SQLite because that is what Android supports. While MySQL does support data
+%replication to MySQL slave servers, it certainly does not support replication to
+%arbitrary alternative DBMS\cite{mySQL_mySQL_????}.
+
+
+%A simpler approach to this problem involved the addition of \textit{metacolumns}
+%to the original schema; or columns defined in a SQL table that do not
+%traditionally relate to the other columns in that table, but instead are used
+%for some application level purpose. The most important of these metacolumns is
+%the \texttt{mod\_ts} (modification timestamp) column. Let's take a simple
+%relation \hbox{\texttt{Student(id, name, year)}} and examine how it can be
+%synchronized across multiple instances without using any DBMS specific features.
+%In this example, both the client and server tables are initialized to the table
+%in Figure~\ref{fig:student_init}. 
+
+The implementation of \schema reduces to the problem of database replication.
+As mentioned in Section~\ref{sec:related}, various DBMSs have replication
+functionality, and companies have attempted to mediate the protocols that they
+use in order to enable replication across different DBMSs with varying success.
+A commitment to the built in database replication features means a commitment to
+a single DBMS per instance of Coexist and support limited to those DBMSs that
+have replication features to begin with, which would complicate the likely
+scenario of Android SQLite clients interfacing with a MySQL server database. 
+Instead, a stateless, pure SQL solution is preferred. The remainder of
+this section will describe such an solution and its role in implementing
+the \schema method.
+
+
+%--------------------------------------------------------
+\subsection{Representing Changes in Rows}  \label{sec:changes}
+
+At the core of a stateless SQL replication protocol lies the ability to import
+database changes using only SQL statements. To simplify the problem, we assume that
+\begin{inparaenum}
+\item each row stores a timestamp value of its most recent modification and
+\item rows are not being deleted, only created and updated.
+\end{inparaenum}
+For every table in a database there will be an additional column called
+\modts of type \term{timestamp}. We will refer to columns that provide
+meta-information about their row as \term{metacolumns}.
+Figure~\ref{fig:student_init} is a SQL table that represents students in a
+university. For readability, the \modts column contains the number of seconds
+since the creation of the table, instead of a lengthy timestamp.
+
+\begin{figure}[h!]
+\center
+\begin{tabular}{ l  l  l  l }
+id  & name      & year  & \textit{mod\_ts} \\
+\hline
+1   & Anthony   & 4     & \textit{0}        \\
+2   & Lucas     & 3     & \textit{0}        \\
+3   & Steven    & 3     & \textit{0}        \\
+\end{tabular}
+\caption{A simple table of that represents students in a university. The \modts
+column is a metacolumn that represents the most recent modification time.}
+\label{fig:student_init}
+\end{figure}
+
+For some DBMS, a trigger similar to the one in Figure~\ref{fig:student_trigger}
+may be required for \texttt{INSERT}, \texttt{UPDATE}, and \texttt{REPLACE} while
+others, like MySQL, happen to automatically update select timestamp columns by
+default\cite{_mysql_????-2}.
+
+\begin{figure}[h!]
+\begin{lstlisting}[language=sql]
+CREATE TRIGGER mod_ts AFTER INSERT ON Student
+  FOR EACH ROW SET mod_ts = NOW();
+\end{lstlisting}
+\caption{A trigger for updating the value of a \modts column with the current
+timestamp whenever an insert is performed.}
+\label{fig:student_trigger}
+\end{figure}
+
+With this metacolumn in place, the only piece of information the server needs about the
+client is the value of its highest modification timestamp. Then, it can retrieve
+the missing rows for the client using a simple SQL query: \texttt{SELECT * FROM
+Students WHERE mod\_ts > x}, assuming the name of the table in
+Figure~\ref{fig:student_init} is \term{Students}, and $x$ is the maximum
+modification timestamp sent from the client. To see how this works, consider
+Figure~\ref{fig:student_update} where a SQL statement is used to update row 2
+and add for 4, ten seconds after the creation of the database. The resulting
+database is shown in tabular format below the SQL.
+
+\begin{figure}[h!]
+\begin{lstlisting}[language=sql]
+BEGIN TRANSACTION;
+INSERT INTO Students(name,year) VALUES(Ryan, 4);
+UPDATE Students SET year=4 WHERE name='Lucas';
+COMMIT;
+\end{lstlisting}
+\center
+\begin{tabular}{ l  l  l  l }
+id  & name      & year  & \textit{mod\_ts} \\
+\hline
+1   & Anthony   & 4     & \textit{0}        \\
+2   & Lucas     & 4     & \textit{10}        \\
+3   & Steven    & 3     & \textit{0}        \\
+4   & Ryan      & 4     & \textit{10}        \\
+\end{tabular}
+\caption{The state of the \term{Students} table after an insert and update are
+performed. The \modts values of rows 2 and 4 are updated accordingly.}
+\label{fig:student_update}
+\end{figure}
+
+A client that is still in the state of Figure~\ref{fig:student_init} and
+requesting a sync would supply the server with a maximum modification
+timestamp for its \term{Students} table (a value of 0) and the server would reply with
+rows 2 and 4. After each sync, the client's database should exactly reflect that
+of the servers, so there is no need to respect primary key constraints -- all
+client rows can be replaced upon conflict. The next step is to introduce SQL
+deletes into the example and modify the algorithm to operate correctly.
+
+
+
+%--------------------------------------------------------
+\subsection{Handling Deletes}  \label{sec:}
+
+
+An issue arose when trying to incorporate SQL \texttt{DELETE}s into the
+system: because server side changes were synchronized with clients using
+\mbox{modification} timestamps, deleted rows would not be propagated to clients. In
+order to support the DELETE operation and preserve the synchronization, an
+additional metacolumn was added: \textit{deleted}.  This metacolumn tells the
+Coexist clients to hide rows from the interface, giving the illusion of
+deletion. 
+
+If any of the columns in Figure~\ref{fig:student_update} are deleted, the server
+would not be able to propagate changes to clients because there would be no
+modification timestamp change. Instead, a second metacolumn, called
+\term{deleted} can be introduced to represent deletions. Specifically, deletes
+are now accomplished through updates of the \term{deleted} column, instead of
+SQL \var{DELETE} queries, and the Coexist clients can just as easily hide deleted
+columns from the user interface. Figure~\ref{fig:new_deleted} represents the
+\term{Students} table of Figure~\ref{fig:student_update} after deleting row 3
+twenty seconds after the creation of the table and the addition of
+a \term{deleted} metacolumn.
+
+
+\begin{figure}[h!]
+\center
+\begin{tabular}{ l  l  l  l  l}
+id  & name      & year  & \textit{mod\_ts} & \textit{deleted} \\ 
+\hline
+1   & Anthony   & 4     & \textit{0}   & \textit{0}     \\
+2   & Lucas     & 4     & \textit{10}   & \textit{0}     \\
+3   & Steven    & 3     & \textit{20}   & \textit{1}     \\
+4   & Ryan      & 4     & \textit{10}   & \textit{0}     \\
+\end{tabular}
+\caption{State of the \term{Students} table after marking row 3 as deleted using
+the \textit{deleted} metacolumn.}
+\label{fig:new_deleted}
+\end{figure}
+
+In this example, \texttt{Steven} would have been marked as deleted from the
+database and hidden from the user interface. Because the change happens in a
+column, it can be propagated to clients without having to change the
+modification-timestamp-based approach.
+
+Unfortunately, two additional problems arise from this fix: 
+\begin{inparaenum}
+\item the deleted rows build up on the server and
+\item the primary keys are still occupied. 
+\end{inparaenum}
+The buildup of rows can be remedied by periodically removing all rows marked as
+deleted with SQL \var{DELETE} queries and triggering resynchronizations on the
+clients. This would cause them to delete their local databases and download all
+missing rows (which would no longer include deleted rows). This is only
+necessary if the deleted rows start to occupy a significant amount of space.
+
+The primary key issue poses a greater functional threat. In Figure~\ref{fig:new_deleted}, clients
+would no longer be able to add a \texttt{Steven} to the database after marking
+him as deleted, nor could they modify the row to un-delete him (assuming
+\texttt{name} is a primary key). To remedy this, clients are required to send a
+boolean parameter called \term{replace} when making updating the server's
+database through requests to \create. Figure~\ref{fig:create} depicts
+the actions of the server when receiving requests to \create.
+
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance = 3cm, auto, scale=.7, every node/.style={transform shape} ]
+  % Place nodes
+  \node [block] (request) {Request to /api/create/};
+  \node [decision, below of=request] (isconflict) {Key violation?};
+  
+  \node [block, left of=isconflict] (create) {Create the row.};
+  \node [decision, right of=isconflict] (nocreate) {Does replace=1?};
+ 
+  \node [block, below of=create] (ok) {\textbf{200 OK}}; 
+
+  \node [dot, below of=nocreate] (nocreateDOT) {};
+
+  \node [block, left of=nocreateDOT] (replace) {Replace it};
+  \node [decision, below of=replace] (isreplace) {Does deleted=1};
+
+  \node [block, left of=isreplace] (error) {\textbf{409 Conflict}};
+
+  % Draw edges
+  \path [line] (request) -- (isconflict);
+  \path [line] (isconflict) -- node [above] {no} (create);
+  \path [line] (isconflict) -- node [above] {yes} (nocreate);
+  \path [line] (create) -- (ok);
+
+  \path [edge] (nocreate) -- (nocreateDOT);
+  \path [line] (nocreateDOT) -- node [above] {yes} (replace);
+  \path [line] (replace) -- (ok);
+
+  \path [line] (nocreateDOT) |- node [right] {no} (isreplace);
+  \path [line] (isreplace) -- node [right] {yes} (replace);
+
+  \path [line] (isreplace) -- node [above] {no} (error);
+
+\end{tikzpicture}
+\caption{The actions that the server takes for every request to \create that it
+receives from clients. This actions depend on clients sending a \term{replaced}
+parameter with their requests.}
+\label{fig:create}
+\end{figure}
+
+The flow chart starts with ``Request to /api/create/'', which is a request
+to create a row on the server from a client. If there is no key constraint
+violation, then the row is created and the server responds with a \texttt{200
+OK}. If there is a violation then the server checks to see if the request's
+\texttt{replace} parameter is set to \texttt{1}. If it is then the conflicting
+row can be replaced without worry and the server responds with a \texttt{200
+OK}.  If not then the server checks to see if the conflicting row is marked as
+deleted. If it is, then the conflicting row can be replaced and the server
+responds with a \texttt{200 OK}. If not, then the server responds with a
+\texttt{409 CONFLICT} and the row is not created. At this point, the client has
+enough information to ask the user if they wish to replace (or update) the
+conflicting row on the server and potentially resend the request with
+\texttt{replace=1}. 
+ 
+This solution reduces the functional burden of the deleted rows, enables SQL
+\texttt{UPDATE} functionality, is completely representable with pure SQL, and
+requires no significant changes to the existing API. 
+
+In summary, we have created a method of synchronization that does not utilize
+and DBMS specific features or introduce any dependencies into Coexist. So far,
+we have solved the problem of database synchronization, but have yet to address
+the other questions presented in Section~\ref{sec:api}: what will the data
+exchange format between the server and clients be, and how will clients know how
+to present database contents to the user? However, we have discovered a some
+requirements of client requests, namely that requests to \create must include a
+\term{replace} parameter and requests to \sync must include one \term{mod\_ts}
+parameter per SQL table. This information will be factored into the design of
+the client-server communication model in Section~\ref{sec:communication}
+
+%-------------------------------------------------------
+%\subsection{Schema Implications}
+%\label{sec:schema}
+%
+%% users won't have to create schemas.
+%
+%The synchronization depends on a few assumptions. If a row was deleted from the
+%server then there would be no reliable way for the client to discover this using
+%only the metacolumns. Assuming no insertions have taken place, missing rows
+%would be $C - S$, where $C$ is the client side table and $S$ is the server side,
+%but we would like to avoid sending the contents of entire tables over the
+%network (aside from the initial synchronization). 
+%
+%Many of the relations of our schema include timestamps to enable us to pose more
+%interesting queries. For example, our \texttt{Shelved( serial\_no, date)}
+%relation allows us to tell Networkmaine all of the devices that were shelved in
+%a given time range; in the past, these devices might have been deleted from
+%their records entirely. For this reason, and the reason in the prior paragraph,
+%we decided it would be a good idea to never delete any data from the database.
+%Instead, the \texttt{deleted} metacolumn was added to each relation; a simple
+%boolean toggle that tells the application that this tuple should be considered
+%deleted. This enables our synchronization method and preserves the integrity of
+%queries that rely on having sufficient data to operate on.
+%
+%Another practice to avoid is using relations to store states. In the original
+%schema for Networkmaine, there was a table \hbox{\texttt{Shelved (serial, date,
+%note)}} that was used to track devices that should be considered retired. These
+%devices could potentially be used again and would have to be marked as deleted
+%in the \texttt{Shelved} table with metacolumns. It is also reasonable to assume
+%that the \texttt{Shelved} table's growth will mirror the \texttt{Device} table's
+%growth because each new device will potentially replace an older device. 
+%
+%One possible solution would be to merge the \texttt{Shelved} table into the
+%\texttt{Device} table. In MySQL, a \texttt{BOOLEAN} occupies 1 byte, a
+%\texttt{TIMESTAMP} occupies 4 bytes, and \texttt{VARCHAR} occupies at least 0
+%bytes and at most 3 bytes per character in utf-8 under the InnoDB engine. The
+%initial database will have about six thousand devices in it, so merging the
+%tables would add about $6000~bytes + 24000~bytes + 625~bytes \approx 30~kb$, or
+%5 bytes per row, where the $625~bytes$ came from the sum off all of the 1 bit
+%bitmasks added for allowing \texttt{NULL} values in the \texttt{VARCHAR} column;
+%a negligible amount for the small growth rate of the database. The updated table
+%is shown in figure~\ref{fig:updated_device}.
+%
+% 
+%\begin{figure}[h!]
+%\begin{lstlisting}[language=sql]
+%CREATE TABLE Device(
+%  serial VARCHAR(32) PRIMARY KEY,
+%  tag VARCHAR(32) NOT NULL,
+%  description VARCHAR(32),
+%  shelved BOOL DEFAULT FALSE NOT NULL,
+%  shelved_notes VARCHAR(32),
+%  shelved_date TIMESTAMP);
+%\end{lstlisting}
+%\caption{Updated \texttt{Device} table.}
+%\label{fig:updated_device}
+%\end{figure}
+%
+
