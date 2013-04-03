@@ -118,10 +118,39 @@ requesting a sync would supply the server with a maximum modification
 timestamp for its \term{Students} table (a value of 0) and the server would reply with
 rows 2 and 4. After each sync, the client's database should exactly reflect that
 of the servers, so there is no need to respect primary key constraints -- all
-client rows can be replaced upon conflict. The next step is to introduce SQL
-deletes into the example and modify the algorithm to operate correctly.
+client rows can be replaced upon conflict. Algorithm~\ref{alg:sync} is a
+pseudocode representation of the implementation of \sync.
 
+\begin{algorithm}[h]
+%\caption{sync(tables)}
+\caption{Retreive missing rows from the server.}
+\label{alg:sync}
+\begin{algorithmic}[1]
 
+  \REQUIRE{$tables$ is an associative array, sent from the client, mapping table names to their maximum
+  modification \mbox{timestamps}.}
+
+  \STATE $s \gets $ \texttt{\sq SELECT * FROM ? WHERE mod\_ts > ?\sq}
+  \STATE $stmt \gets $ a prepared SQL statemnt of $s$
+  \STATE $rows \gets$ a new associative array
+  \FOR{$table,timestamp$ in $tables$}
+    \STATE bind $table$ and $timestamp$ to $stmt$
+    \STATE $rows[table] \gets$ list of rows from executing $stmt$
+  \ENDFOR
+  \RETURN $rows$
+  
+\end{algorithmic}
+\end{algorithm}
+
+The \term{sync} function takes an associative array, \term{tables}, mapping table
+names to their maximum modification timestamps on the client. Line 1 is the
+simple SQL statement that the server uses to to retrieve the missing rows.
+The next line is the typical boilerplate that will have to be coded before
+connecting to a database and executing SQL queries. The remaining loop will bind
+the variables to the question marks in the SQL of line 1, execute the statement,
+and add a list of the resulting rows to the return associative array with a key
+of the current table name.  The next step is to introduce SQL deletes into the
+example and modify the algorithm if necessary.
 
 %--------------------------------------------------------
 \subsection{Handling Deletes}  \label{sec:}
@@ -130,8 +159,8 @@ deletes into the example and modify the algorithm to operate correctly.
 An issue arose when trying to incorporate SQL \texttt{DELETE}s into the
 system: because server side changes were synchronized with clients using
 \mbox{modification} timestamps, deleted rows would not be propagated to clients. In
-order to support the DELETE operation and preserve the synchronization, an
-additional metacolumn was added: \textit{deleted}.  This metacolumn tells the
+order to support the \var{DELETE} operation and preserve the synchronization, an
+additional metacolumn is added: \textit{deleted}.  This metacolumn tells the
 Coexist clients to hide rows from the interface, giving the illusion of
 deletion. 
 
@@ -182,7 +211,7 @@ The primary key issue poses a greater functional threat. In Figure~\ref{fig:new_
 would no longer be able to add a \texttt{Steven} to the database after marking
 him as deleted, nor could they modify the row to un-delete him (assuming
 \texttt{name} is a primary key). To remedy this, clients are required to send a
-boolean parameter called \term{replace} when making updating the server's
+boolean parameter called \term{replace} when updating the server's
 database through requests to \create. Figure~\ref{fig:create} depicts
 the actions of the server when receiving requests to \create.
 
@@ -246,13 +275,16 @@ This solution reduces the functional burden of the deleted rows, enables SQL
 \texttt{UPDATE} functionality, is completely representable with pure SQL, and
 requires no significant changes to the existing API. 
 
+
+
 In summary, we have created a method of synchronization that does not utilize
 and DBMS specific features or introduce any dependencies into Coexist. So far,
-we have solved the problem of database synchronization, but have yet to address
+we have solved the problem of database synchronization and the implementation of
+\sync, but have yet to address
 the other questions presented in Section~\ref{sec:api}: what will the data
 exchange format between the server and clients be, and how will clients know how
-to present database contents to the user? However, we have discovered a some
-requirements of client requests, namely that requests to \create must include a
+to present database contents to the user? However, we have made two important
+discoveries about the client: requests to \create must include a
 \term{replace} parameter and requests to \sync must include one \term{mod\_ts}
 parameter per SQL table. This information will be factored into the design of
 the client-server communication model in Section~\ref{sec:communication}
