@@ -257,15 +257,16 @@ sha1(version + T + M + username + sha1(password))
 \end{figure}
 
 So for a schema that consisted of the tables $Students$ and $Courses$, with
-maximum modification timestamps\footnote{These timestamps are the same ones
-depicted in figure~\ref{fig:student_init}} of $2012-12-01 16:18:31$ and
+maximum modification timestamps of $2012-12-01 16:18:31$ and
 $2012-12-01 16:18:43$ respectively, under version $1$ of the database, with a
-user name of $anthonyn$ and a password of $password$, the signature would be
+user name of $tim$ and a password of $password$, the signature would be
 equal to \hbox{$9d64e5fbba865b491adeeeead91666df8d7cb1ec$}.
+
+%TODO recalculate checksum
 
 %begin{figure}[h!]
 %sha1("1StudentsCourses2012-12-01 16:\\
-%8:312012-12-01 16:18:43anthonyn5baa6\\
+%8:312012-12-01 16:18:43timn5baa6\\
 %e4c9b93f3f0682250b6cf8331b7ee68fd8") \\
 % 9d64e5fbba865b491adeeeead91666df8d7cb1ec$
 %caption{My Listing}

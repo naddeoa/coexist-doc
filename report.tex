@@ -16,9 +16,8 @@
 \usepackage{color}
 \usepackage{xcolor}
 \usepackage{paralist}
-%\usepackage{caption}
-%\usepackage{subcaption}
-
+\usepackage[font={small}]{caption}
+\usepackage{subcaption}
 
 \usepackage{hyperref}
 \hypersetup{
@@ -34,6 +33,14 @@
 \usetikzlibrary{shapes,arrows}
 \usetikzlibrary{positioning}
 \usetikzlibrary{shadows}
+\usetikzlibrary{trees}
+
+\tikzstyle{file}=[draw=black,thick,anchor=west]
+\tikzstyle{selected}=[draw=red,fill=red!30]
+\tikzstyle{dir}=[draw=black,dashed]
+
+
+
 \tikzstyle{every entity} = [top color=white, bottom color=blue!30,
                             draw=blue!50!black!100, drop shadow]
 \tikzstyle{every weak entity} = [drop shadow={shadow xshift=.7ex,
@@ -130,10 +137,12 @@
 \newcommand{\var}[1]{\texttt{#1}}
 \newcommand{\term}[1]{\textit{#1}}
 
-\newcommand{\schema}[0]{\term{/api/schema~}}
-\newcommand{\metamodel}[0]{\term{/api/metamodel~}}
-\newcommand{\sync}[0]{\term{/api/sync~}}
-\newcommand{\create}[0]{\term{/api/create~}}
+
+\usepackage{xspace}
+\newcommand{\schema}[0]{\var{/api/schema}\xspace}
+\newcommand{\metamodel}[0]{\var{/api/metamodel}\xspace}
+\newcommand{\sync}[0]{\var{/api/sync}\xspace}
+\newcommand{\create}[0]{\var{/api/create}\xspace}
 
 % vocab terms
 \newcommand{\modts}[0]{\term{mod\_ts~}}
@@ -141,7 +150,7 @@
 
 %-------------------------------------------------------
 \begin{document}
-\title{A Minimalist Data Access System\\ for Android Clients}
+\title{A Minimalist Data Access System for Arbitrary Client Types} 
 \author{Anthony Naddeo \\ Advisor: Sudarshan Chawathe}
 
 \maketitle

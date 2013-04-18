@@ -7,7 +7,7 @@ The term CRUD refers to the four basic operations on persistent storage: create,
 read, update and delete. Many CRUD focused applications implement their
 persistence layers using relational databases. Of these applications, many
 require multiple users to be able to perform CRUD operations on the same
-database\footnote{give an example} from arbitrary client types (Android, Web
+database from arbitrary client types (Android, Web
 etc.). The data managed by CRUD applications varies greatly, but functionality
 and user interfaces are largely the same across instances. For this reason,
 there have been many frameworks that aid developers in creating their own CRUD
@@ -27,10 +27,11 @@ specifically) and its dependency on proprietary Microsoft technology (as opposed
 to open standards like Apache, PHP and MySQL). 
 
 In this paper, we expand the generic CRUD application model described by
-Giulieri\footnote{cite} to enable arbitrary client types and support mobile
-clients by adding features like database replication for off line reading. This
-project was originally an inventory application designed for Networkmaine, the
-Internet service provider (ISP) for the public schools and libraries of Maine.
+Giulieri to enable arbitrary client types and support mobile clients by adding
+features like database replication for off line
+reading\cite{giulieri_minimalist_2011}. This project was originally an inventory
+application designed for Networkmaine, the Internet service provider (ISP) for
+the public schools and libraries of Maine.
 
 
 %--------------------------------------------------------
@@ -104,7 +105,7 @@ We are interested in creating a generic CRUD system that shares a single databas
 \item be easier to use than creating a CRUD application,
 \item allow off line reading on mobile clients,
 \item have easily deployable instances for different databases and
-\item never require source code modification for updates\footnote{Bugs in the source code will clearly require more traditional updates, but clients should adapt to the addition of tables or columns to the database.}.
+\item never require source code modification for updates
 \end{inparaenum}
 In order to meet these requirements, we must have a way of replicating databases across arbitrary DBMS, isolate the parts of application instances that need to be customized (i.e. name and icon), and describe the UI enough for clients to display lists and forms that enable CRUD operations. Giulieri summarized his efforts well in his entry into the Code Generator 2008 Competition\cite{giulieri_minimalist_2011}
 \begin{quotation}
