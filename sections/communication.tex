@@ -3,6 +3,9 @@
 \section{Client-Server Communication} \label{sec:communication}
 %--------------------------------------------------------
 
+In this section, we create a communication model between the server and clients
+based around the four Coexist API methods listed in Section~\ref{sec:api}. In
+Coexist, every client fully replicates the content of the central database.
 
 
 %Many mobile applications are supplemented by a local database (typically
@@ -15,89 +18,93 @@
 
 %Before deciding upon a
 
-This section will explore some of the methods that the client can use to
-interface with the server, their advantages and disadvantages, and explain why
-the method labeled as the \textit{mirror method} is the appropriate choice. The
-following subsections will give details on the implementation of this method and
-its implications on the database schema; particularly, how normalized it should
-be and how to handle deletions. In all diagrams in this section, the arrows
-indicate the flow of data and the labels indicate the actions that cause them.
+%This section will explore some of the methods that the client can use to
+%interface with the server, their advantages and disadvantages, and explain why
+%the method labeled as the \textit{mirror method} is the appropriate choice. The
+%following subsections will give details on the implementation of this method and
+%its implications on the database schema; particularly, how normalized it should
+%be and how to handle deletions. In all diagrams in this section, the arrows
+%indicate the flow of data and the labels indicate the actions that cause them.
 
 
-%-------------------------------------------------------
-\subsubsection{Window method}
+%%-------------------------------------------------------
+%\subsubsection{Window method}
+%
+%In the window method, the data that a user sees at any given time is a window
+%into the back end server; all of the data came from the server and none of it is
+%going to persist beyond this screen. The major advantage to this method is its
+%ease of implementation. This would be a suitable fit for a small weather
+%application; in fact, it is the approach that my own weather application ,
+%QtWeather, uses.  
+%
+%%TODO add some more analysis details
+%
+%\begin{figure}[h!]
+%\centering
+%\begin{tikzpicture}[node distance = 2cm, auto, scale=.7, every node/.style={transform shape}]
+%  % Place nodes
+%  \node [block] (client) {client};
+%  \node [block, right of=client, node distance=5cm] (server) {server};
+%  % Draw edges
+%  \path [line] (server.165) -- node [above] {query} (client.15);
+%  \path [line] (client.345) -- node [below] {udpate} (server.195);
+%\end{tikzpicture}
+%\caption{Window method}
+%\label{fig:window}
+%\end{figure}
+%
+%
+%%-------------------------------------------------------
+%\subsubsection{Cache method}
+%
+%Treating the client as a window requires that we don't have large amounts of
+%data constantly being retrieved from the server. If this is not the case, then
+%we may want to identify some data (or queries) that are commonly used in order
+%to cache (and optionally sync) on the client's local database. This would be
+%suitable for a mobile social networking client. Take a typical Facebook
+%application for example; it would be advantageous to cache a users top five
+%commonly used groups as well as their friend list because this information is
+%supposedly accessed often and is relatively static. In contrast, caching the
+%Facebook news feed would probably result in a lot of wasted space because of how
+%fast it changes and how rarely old news feed entries are viewed. 
+%
+%
+%
+%\begin{figure}[h!]
+%\centering
+%\begin{tikzpicture}[node distance = 2cm, auto, scale=.7, every node/.style={transform shape}]
+%  % Place nodes
+%  \node [block] (client) {client};
+%  \node [block, right of=client, node distance=5cm] (server) {server};
+%  \node [db, below of=client, node distance=4cm, align=center] (database) {local \\ database};
+%
+%  % Draw edges
+%  % Need to align in order to line break
+%  \path [line] (server.165) -- node [above, align=center] {query \\ un-cachable data} (client.15);
+%  \path [line] (client.345) -- node [below] {update} (server.195);
+%  \path [line] (server) |- node {sync cache} (database);
+%  \path [line] (database) -- node [align=left] {query frequent \\ and static data} (client);
+%\end{tikzpicture}
+%\caption{Cache method}
+%\label{fig:cache}
+%\end{figure}
 
-In the window method, the data that a user sees at any given time is a window
-into the back end server; all of the data came from the server and none of it is
-going to persist beyond this screen. The major advantage to this method is its
-ease of implementation. This would be a suitable fit for a small weather
-application; in fact, it is the approach that my own weather application ,
-QtWeather, uses.  
-
-%TODO add some more analysis details
-
-\begin{figure}[h!]
-\centering
-\begin{tikzpicture}[node distance = 2cm, auto, scale=.7, every node/.style={transform shape}]
-  % Place nodes
-  \node [block] (client) {client};
-  \node [block, right of=client, node distance=5cm] (server) {server};
-  % Draw edges
-  \path [line] (server.165) -- node [above] {query} (client.15);
-  \path [line] (client.345) -- node [below] {udpate} (server.195);
-\end{tikzpicture}
-\caption{Window method}
-\label{fig:window}
-\end{figure}
-
-
-%-------------------------------------------------------
-\subsubsection{Cache method}
-
-Treating the client as a window requires that we don't have large amounts of
-data constantly being retrieved from the server. If this is not the case, then
-we may want to identify some data (or queries) that are commonly used in order
-to cache (and optionally sync) on the client's local database. This would be
-suitable for a mobile social networking client. Take a typical Facebook
-application for example; it would be advantageous to cache a users top five
-commonly used groups as well as their friend list because this information is
-supposedly accessed often and is relatively static. In contrast, caching the
-Facebook news feed would probably result in a lot of wasted space because of how
-fast it changes and how rarely old news feed entries are viewed. 
 
 
 
-\begin{figure}[h!]
-\centering
-\begin{tikzpicture}[node distance = 2cm, auto, scale=.7, every node/.style={transform shape}]
-  % Place nodes
-  \node [block] (client) {client};
-  \node [block, right of=client, node distance=5cm] (server) {server};
-  \node [db, below of=client, node distance=4cm, align=center] (database) {local \\ database};
-
-  % Draw edges
-  % Need to align in order to line break
-  \path [line] (server.165) -- node [above, align=center] {query \\ un-cachable data} (client.15);
-  \path [line] (client.345) -- node [below] {update} (server.195);
-  \path [line] (server) |- node {sync cache} (database);
-  \path [line] (database) -- node [align=left] {query frequent \\ and static data} (client);
-\end{tikzpicture}
-\caption{Cache method}
-\label{fig:cache}
-\end{figure}
 
 
-%-------------------------------------------------------
-\subsubsection{Mirror method}
-The window method has the client retrieve all data from the server all of the
-time, the cache method identifies some useful data to store and then caches it
-locally; the mirror method is the next natural step in this progression: cache
-the entire database. There are some immediate concerns with this approach, most
-prominent of which concerns the size of the database potentially being much
-larger than the what we can reasonably expect to store on the client. The
-advantages to this method are faster query times and less reliance on the
-network. In fact, this is the only method that would enable a fully readable
-database off line.
+
+
+%The window method has the client retrieve all data from the server all of the
+%time, the cache method identifies some useful data to store and then caches it
+%locally; the mirror method is the next natural step in this progression: cache
+%the entire database. There are some immediate concerns with this approach, most
+%prominent of which concerns the size of the database potentially being much
+%larger than the what we can reasonably expect to store on the client. The
+%advantages to this method are faster query times and less reliance on the
+%network. In fact, this is the only method that would enable a fully readable
+%database off line.
 
 \begin{figure}[h!]
 \centering
@@ -113,28 +120,140 @@ database off line.
   \path [line] (server) |- node {mirror} (database);
   \path [line] (database) -- node [align=left] {query} (client);
 \end{tikzpicture}
-\caption{Mirror method}
+\caption{The flow of information in Coexist. Clients send updates to the server
+and store the contents of requests in their local database. Clients never modify
+their local database.}
 \label{fig:mirror}
 \end{figure}
 
-The Networkmaine inventory database contains information for approximately six
-thousand devices, location, purchase order and rma information for batches of
-devices; the size of the MySQL database dump is 1.5 megabytes. In addition, the
-database will not grow quickly. The size of the database makes the mirror method
-very attractive: if Networkmaine added two thousand units a year to its
-deployment then in twenty years the size of the database would be no less than
-12 megabytes; still reasonable to store on the mobile clients we see available
-today (probably more so on the mobile clients in twenty years, if we still use
-them). Realistically, there won't be more than a few hundred devices added to
-the inventory each year, at most. It is for these reasons that the mirror method
-is preferable for this project. 
+%The Networkmaine inventory database contains information for approximately six
+%thousand devices, location, purchase order and rma information for batches of
+%devices; the size of the MySQL database dump is 1.5 megabytes. In addition, the
+%database will not grow quickly. The size of the database makes the mirror method
+%very attractive: if Networkmaine added two thousand units a year to its
+%deployment then in twenty years the size of the database would be no less than
+%12 megabytes; still reasonable to store on the mobile clients we see available
+%today (probably more so on the mobile clients in twenty years, if we still use
+%them). Realistically, there won't be more than a few hundred devices added to
+%the inventory each year, at most. It is for these reasons that the mirror method
+%is preferable for this project. 
+
+
+
+\begin{figure}[h!]
+\begin{subfigure}[b]{0.23\textwidth}
+\begin{lstlisting}[language=json]
+db="sqlite"
+\end{lstlisting}
+\caption{request}
+\label{fig:gull}
+\end{subfigure}%
+\begin{subfigure}[b]{0.27\textwidth}
+\begin{lstlisting}[language=json]
+{
+  "status":200,
+  "message":"OK",
+  "version":1,
+  "sql":["..."]
+}
+\end{lstlisting}
+\caption{json}
+\label{fig:tiger}
+\end{subfigure}
+\caption{\schema}
+\label{fig:animals} \end{figure}
+
+
+
+
+\begin{figure}[h!]
+\begin{subfigure}[b]{0.23\textwidth}
+\begin{lstlisting}[language=json]
+version=1&
+sync=
+  {
+  "tables":
+    {
+      "Exercises":
+      [
+        {
+          "Exercise":
+          "bb curls"
+        }
+      ]
+    }
+\end{lstlisting}
+\caption{request}
+\label{fig:gull}
+\end{subfigure}%
+\begin{subfigure}[b]{0.27\textwidth}
+\begin{lstlisting}[language=json]
+{
+  "status":200,
+  "message":"OK"
+}
+\end{lstlisting}
+\caption{json}
+\label{fig:tiger}
+\end{subfigure}
+\caption{\create}
+\label{fig:animals} \end{figure}
 
 
 
 
 
-%--------------------------------------------------------
-%\subsection{Database Replication} \label{sec:db}
+
+\begin{figure}[h!]
+\begin{subfigure}[b]{0.23\textwidth}
+\begin{lstlisting}[language=json]
+version=1&
+tables=
+  [
+  "BodyParts",
+  "Exercises",
+  "Measurements",
+  "Sets"
+  ]&
+mod_ts=
+  [
+  "2013-02-1104:21:06",
+  "2013-04-20 22:33:24",
+  "2013-03-14 05:51:14",
+  "2013-04-20 22:42:58"
+  ]
+\end{lstlisting}
+\caption{request}
+\label{fig:gull}
+\end{subfigure}%
+\begin{subfigure}[b]{0.27\textwidth}
+\begin{lstlisting}[language=json]
+{
+  "status":200,
+  "message":"OK",
+  "tables":
+    {
+      "BodyParts":[],
+      "Exercises":[
+        {
+          "exercise":"bb curls",
+          "mod_ts":"2013-04-21 04:32:18",
+          "deleted":"0"
+        }
+      ],
+      "Measurements":[],
+      "Sets":[]
+    }
+}
+\end{lstlisting}
+\caption{json}
+\label{fig:tiger}
+\end{subfigure}
+\caption{\sync}\label{fig:animals} \end{figure}
+
+
+
+
 
 
 It is important to ensure that the client can never update the server if the

@@ -158,22 +158,15 @@ example and modify the algorithm if necessary.
 
 An issue arose when trying to incorporate SQL \texttt{DELETE}s into the
 system: because server side changes were synchronized with clients using
-\mbox{modification} timestamps, deleted rows would not be propagated to clients. In
-order to support the \var{DELETE} operation and preserve the synchronization, an
-additional metacolumn is added: \textit{deleted}.  This metacolumn tells the
+\mbox{modification} timestamps, deleted rows would not be propagated to clients.
+In order to support the \var{DELETE} operation and preserve the synchronization,
+an additional metacolumn is added: \var{deleted}.  This metacolumn tells the
 Coexist clients to hide rows from the interface, giving the illusion of
-deletion. 
-
-If any of the columns in Figure~\ref{fig:student_update} are deleted, the server
-would not be able to propagate changes to clients because there would be no
-modification timestamp change. Instead, a second metacolumn, called
-\term{deleted} can be introduced to represent deletions. Specifically, deletes
-are now accomplished through updates of the \term{deleted} column, instead of
-SQL \var{DELETE} queries, and the Coexist clients can just as easily hide deleted
-columns from the user interface. Figure~\ref{fig:new_deleted} represents the
-\term{Students} table of Figure~\ref{fig:student_update} after deleting row 3
-twenty seconds after the creation of the table and the addition of
-a \term{deleted} metacolumn.
+deletion.  This means deletes are accomplished through updates of the
+\var{deleted} column, instead of SQL \var{DELETE} queries.
+Figure~\ref{fig:new_deleted} represents the \term{Students} table of
+Figure~\ref{fig:student_update} after deleting row 3 twenty seconds after the
+creation of the table and the addition of a \term{deleted} metacolumn.
 
 
 \begin{figure}[h!]
@@ -186,12 +179,12 @@ id  & name      & year  & \textit{mod\_ts} & \textit{deleted} \\
 3   & Steven    & 3     & \textit{20}   & \textit{1}     \\
 4   & Ryan      & 4     & \textit{10}   & \textit{0}     \\
 \end{tabular}
-\caption{State of the \term{Students} table after marking row 3 as deleted using
-the \textit{deleted} metacolumn.}
+\caption{State of the \var{Students} table after marking row 3 as deleted using
+the \var{deleted} metacolumn.}
 \label{fig:new_deleted}
 \end{figure}
 
-In this example, \texttt{Steven} would have been marked as deleted from the
+In this example, \var{Steven} would have been marked as deleted from the
 database and hidden from the user interface. Because the change happens in a
 column, it can be propagated to clients without having to change the
 modification-timestamp-based approach.
@@ -208,10 +201,10 @@ missing rows (which would no longer include deleted rows). This is only
 necessary if the deleted rows start to occupy a significant amount of space.
 
 The primary key issue poses a greater functional threat. In Figure~\ref{fig:new_deleted}, clients
-would no longer be able to add a \texttt{Steven} to the database after marking
+would no longer be able to add a \var{Steven} to the database after marking
 him as deleted, nor could they modify the row to un-delete him (assuming
-\texttt{name} is a primary key). To remedy this, clients are required to send a
-boolean parameter called \term{replace} when updating the server's
+\var{name} is a primary key). To remedy this, clients are required to send a
+boolean parameter called \var{replace} when updating the server's
 database through requests to \create. Figure~\ref{fig:create} depicts
 the actions of the server when receiving requests to \create.
 
@@ -277,15 +270,15 @@ requires no significant changes to the existing API.
 
 
 
-In summary, we have created a method of synchronization that does not utilize
-and DBMS specific features or introduce any dependencies into Coexist. So far,
+In summary, we have created a method of synchronization that utilizes
+only standard SQL features and doesn't introduce any dependencies into Coexist. So far,
 we have solved the problem of database synchronization and the implementation of
 \sync, but have yet to address
 the other questions presented in Section~\ref{sec:api}: what will the data
 exchange format between the server and clients be, and how will clients know how
 to present database contents to the user? However, we have made two important
 discoveries about the client: requests to \create must include a
-\term{replace} parameter and requests to \sync must include one \term{mod\_ts}
+\term{replace} parameter and requests to \sync must include one \var{mod\_ts}
 parameter per SQL table. This information will be factored into the design of
 the client-server communication model in Section~\ref{sec:communication}
 
