@@ -1,110 +1,12 @@
-
 %--------------------------------------------------------
 \section{Client-Server Communication} \label{sec:communication}
 %--------------------------------------------------------
 
 In this section, we create a communication model between the server and clients
 based around the four Coexist API methods listed in Section~\ref{sec:api}. In
-Coexist, every client fully replicates the content of the central database.
+Coexist, every client fully replicates the content of the central database, so
+the transfer of information ends up resembling Figure~\ref{fig:mirror}.
 
-
-%Many mobile applications are supplemented by a local database (typically
-%SQLite). Some applications are stand alone and use these databases primarily as
-%persistent storage; the Networkmaine inventory application uses its local
-%database to interface with the remote back end MySQL server that it depends
-%heavily on. There were three methods for this interfacing that represent
-%different degrees of caching, from none, to selective, to complete.
-
-
-%Before deciding upon a
-
-%This section will explore some of the methods that the client can use to
-%interface with the server, their advantages and disadvantages, and explain why
-%the method labeled as the \textit{mirror method} is the appropriate choice. The
-%following subsections will give details on the implementation of this method and
-%its implications on the database schema; particularly, how normalized it should
-%be and how to handle deletions. In all diagrams in this section, the arrows
-%indicate the flow of data and the labels indicate the actions that cause them.
-
-
-%%-------------------------------------------------------
-%\subsubsection{Window method}
-%
-%In the window method, the data that a user sees at any given time is a window
-%into the back end server; all of the data came from the server and none of it is
-%going to persist beyond this screen. The major advantage to this method is its
-%ease of implementation. This would be a suitable fit for a small weather
-%application; in fact, it is the approach that my own weather application ,
-%QtWeather, uses.  
-%
-%%TODO add some more analysis details
-%
-%\begin{figure}[h!]
-%\centering
-%\begin{tikzpicture}[node distance = 2cm, auto, scale=.7, every node/.style={transform shape}]
-%  % Place nodes
-%  \node [block] (client) {client};
-%  \node [block, right of=client, node distance=5cm] (server) {server};
-%  % Draw edges
-%  \path [line] (server.165) -- node [above] {query} (client.15);
-%  \path [line] (client.345) -- node [below] {udpate} (server.195);
-%\end{tikzpicture}
-%\caption{Window method}
-%\label{fig:window}
-%\end{figure}
-%
-%
-%%-------------------------------------------------------
-%\subsubsection{Cache method}
-%
-%Treating the client as a window requires that we don't have large amounts of
-%data constantly being retrieved from the server. If this is not the case, then
-%we may want to identify some data (or queries) that are commonly used in order
-%to cache (and optionally sync) on the client's local database. This would be
-%suitable for a mobile social networking client. Take a typical Facebook
-%application for example; it would be advantageous to cache a users top five
-%commonly used groups as well as their friend list because this information is
-%supposedly accessed often and is relatively static. In contrast, caching the
-%Facebook news feed would probably result in a lot of wasted space because of how
-%fast it changes and how rarely old news feed entries are viewed. 
-%
-%
-%
-%\begin{figure}[h!]
-%\centering
-%\begin{tikzpicture}[node distance = 2cm, auto, scale=.7, every node/.style={transform shape}]
-%  % Place nodes
-%  \node [block] (client) {client};
-%  \node [block, right of=client, node distance=5cm] (server) {server};
-%  \node [db, below of=client, node distance=4cm, align=center] (database) {local \\ database};
-%
-%  % Draw edges
-%  % Need to align in order to line break
-%  \path [line] (server.165) -- node [above, align=center] {query \\ un-cachable data} (client.15);
-%  \path [line] (client.345) -- node [below] {update} (server.195);
-%  \path [line] (server) |- node {sync cache} (database);
-%  \path [line] (database) -- node [align=left] {query frequent \\ and static data} (client);
-%\end{tikzpicture}
-%\caption{Cache method}
-%\label{fig:cache}
-%\end{figure}
-
-
-
-
-
-
-
-
-%The window method has the client retrieve all data from the server all of the
-%time, the cache method identifies some useful data to store and then caches it
-%locally; the mirror method is the next natural step in this progression: cache
-%the entire database. There are some immediate concerns with this approach, most
-%prominent of which concerns the size of the database potentially being much
-%larger than the what we can reasonably expect to store on the client. The
-%advantages to this method are faster query times and less reliance on the
-%network. In fact, this is the only method that would enable a fully readable
-%database off line.
 
 \begin{figure}[h!]
 \centering
@@ -117,7 +19,7 @@ Coexist, every client fully replicates the content of the central database.
   % Draw edges
   % Need to align in order to line break
   \path [line] (client) -- node {udpate} (server);
-  \path [line] (server) |- node {mirror} (database);
+  \path [line] (server) |- node {sync} (database);
   \path [line] (database) -- node [align=left] {query} (client);
 \end{tikzpicture}
 \caption{The flow of information in Coexist. Clients send updates to the server
@@ -126,17 +28,15 @@ their local database.}
 \label{fig:mirror}
 \end{figure}
 
-%The Networkmaine inventory database contains information for approximately six
-%thousand devices, location, purchase order and rma information for batches of
-%devices; the size of the MySQL database dump is 1.5 megabytes. In addition, the
-%database will not grow quickly. The size of the database makes the mirror method
-%very attractive: if Networkmaine added two thousand units a year to its
-%deployment then in twenty years the size of the database would be no less than
-%12 megabytes; still reasonable to store on the mobile clients we see available
-%today (probably more so on the mobile clients in twenty years, if we still use
-%them). Realistically, there won't be more than a few hundred devices added to
-%the inventory each year, at most. It is for these reasons that the mirror method
-%is preferable for this project. 
+All clients in Coexist send requests to add and update data to the server
+through \create. When the server confirms that the request was successful, the
+client is free to initiate a sync, which will bring down all updated rows via
+the methods described in Section~\ref{sec:replication}. All read operations are
+performed on the local database and writes only occur through syncs. This
+guarantees that clients will never have more information than the server so
+users can rest assured that any data they can view must also be on the central
+server and all other clients. From here, we can discuss the details of the four
+API methods, starting with \schema in Figure~\ref{fig:request_schema}. 
 
 
 
@@ -145,7 +45,7 @@ their local database.}
 \begin{lstlisting}[language=json]
 db="sqlite"
 \end{lstlisting}
-\caption{request}
+\caption{Client HTTP request.}
 \label{fig:gull}
 \end{subfigure}%
 \begin{subfigure}[b]{0.27\textwidth}
@@ -157,51 +57,26 @@ db="sqlite"
   "sql":["..."]
 }
 \end{lstlisting}
-\caption{json}
+\caption{Server JSON response.}
 \label{fig:tiger}
 \end{subfigure}
-\caption{\schema}
-\label{fig:animals} \end{figure}
+\caption{A sample client request to \schema, where the left side is the client's
+request parameters and the right is the server's response.}
+\label{fig:request_schema} \end{figure}
 
+The purpose of \schema is to allow the client to retrieve schema information
+from the server. The only information that the server needs from a client in
+order to fulfil its request is the type of database that it uses, so the only
+required parameter is \var{db}. In this example, the client uses a SQLite
+database, so it passes a value of \var{sqlite} for the \var{db} parameter.
+Currently, Coexist doesn't take advantage of any non-standard SQL features
+\var{db} isn't actually used, but that may change in the future. 
 
-
-
-\begin{figure}[h!]
-\begin{subfigure}[b]{0.23\textwidth}
-\begin{lstlisting}[language=json]
-version=1&
-sync=
-  {
-  "tables":
-    {
-      "Exercises":
-      [
-        {
-          "Exercise":
-          "bb curls"
-        }
-      ]
-    }
-\end{lstlisting}
-\caption{request}
-\label{fig:gull}
-\end{subfigure}%
-\begin{subfigure}[b]{0.27\textwidth}
-\begin{lstlisting}[language=json]
-{
-  "status":200,
-  "message":"OK"
-}
-\end{lstlisting}
-\caption{json}
-\label{fig:tiger}
-\end{subfigure}
-\caption{\create}
-\label{fig:animals} \end{figure}
-
-
-
-
+The response from the server contains an obligatory \var{status} and
+\var{message} parameter, followed by the current version of the server side
+database schema (used in requests to \sync), and a \var{sql} parameter
+containing the raw SQL that the client can use to construct its local database.
+The \sync request shown in Figure~\ref{fig:request_sync} is more complicated.
 
 
 \begin{figure}[h!]
@@ -223,8 +98,8 @@ mod_ts=
   "2013-04-20 22:42:58"
   ]
 \end{lstlisting}
-\caption{request}
-\label{fig:gull}
+\caption{Client HTTP request.}
+%\label{fig:gull}
 \end{subfigure}%
 \begin{subfigure}[b]{0.27\textwidth}
 \begin{lstlisting}[language=json]
@@ -246,26 +121,99 @@ mod_ts=
     }
 }
 \end{lstlisting}
-\caption{json}
+\caption{Server JSON response.}
+\label{fig:request_sync_response}
+\end{subfigure}
+\caption{A sample client request to \sync, where the left side is the client's
+request parameters and the right is the server's response.}
+\label{fig:request_sync} 
+\end{figure}
+
+Request structure is taken right from Section~\ref{sec:replication}. Each
+request to \sync has a \var{version}, \var{tables}, and \var{mod\_ts}
+parameter. The \var{version} parameter should contain the current client
+version, which it will learn through a call to \schema. This version aligns
+with the schema being used on the server. If the client version does not match
+the server version then the client is out of date and needs to restart the
+its life cycle, shown in Figure~\ref{fig:client_states}.
+
+The \var{tables} parameter takes a JSON array of table names in no particular
+order. These names will be the tables of the client's local database. In this
+example, the client's local database has tables named Body Parts, Exercises,
+Measurements, and Sets. This is closely related to the \var{mod\_ts} parameter
+which takes a JSON array of modification timestamps where the $i^{th}$ timestamp is
+the most recent modification timestamp for $i^{th}$ table in \var{tables}
+
+The response from the server contains the \var{tables} parameter, which is a
+JSON object where each attribute is named after a table. Each table attribute
+contains an array of objects that represent missing rows that need to be added
+to the client based on the timestamps it sent. In this example, the
+\var{Exercises} table was missing one row with columns \var{exercise},
+\var{mod\_ts}, and \var{deleted}. Currently, the column names are contained in
+every object, which doubles the size of the request. In the future, the values
+will not be objects with table name keys, they will just be arrays of values.
+This means that \var{Exercises} key in Figure~\ref{fig:request_sync_response}
+would have a value of \var{[["bb curls","2013-04-21 04:32:18","0"]]}, and list
+the column names outside of the array. The \sync and \create requests are the
+bread and butter of Coexist clients, making up the majority of functionality and
+percentage of requests. Figure~\ref{fig:request_create} contains a sample
+request to \create.
+
+\begin{figure}[h!]
+\begin{subfigure}[b]{0.23\textwidth}
+\begin{lstlisting}[language=json]
+version=1&
+sync=
+  {
+  "tables":
+    {
+      "Exercises":[
+        {
+          "Exercise":
+          "bb curls"
+        }
+      ]
+    }
+\end{lstlisting}
+\caption{Client HTTP request.}
+\label{fig:gull}
+\end{subfigure}%
+\begin{subfigure}[b]{0.27\textwidth}
+\begin{lstlisting}[language=json]
+{
+  "status":200,
+  "message":"OK"
+}
+\end{lstlisting}
+\caption{Server JSON response.}
 \label{fig:tiger}
 \end{subfigure}
-\caption{\sync}\label{fig:animals} \end{figure}
+\caption{A sample client request to \create, where the left side is the client's
+request parameters and the right is the server's response.}
+\label{fig:request_create} 
+\end{figure}
 
 
+Requests to \create look very similar to the server responses from \sync. In
+general, clients send a \var{version} and \var{sync} parameter, where \var{sync}
+contains an object that maps table names to arrays of objects that should be added
+to the server side database. If there are no issues adding the row, then the
+server replies with a 200 status code and the client is free to call \sync to
+bring the new rows into its local storage.
 
-
-
-
-It is important to ensure that the client can never update the server if the
-client is out of sync, and the client must always have a way of re-syncing
-itself.  This can be achieved with two simple API functions, \texttt{/api/sync}
-and \texttt{/api/schema}; where one function requests missing information and
-another requests schema information. This design accounts for the database
-schema being upgraded on the server, and clients attempting to make changes to
-the database server when out of sync. Figure~\ref{fig:protocol} depicts the
-network dialog between a client and server where the client attempts to sync
-itself when it is using and old version of the database. 
-
+The examples in this section so far have assumed that requests are successful.
+In reality, there are a few scenarios where clients can run into conflicts,
+namely when
+\begin{inparaenum}
+\item making requests to \sync and \create with a mismatching version and
+\item making requests to \create that violate key constraints. 
+\end{inparaenum}
+The latter was addressed in Figure~\ref{fig:create} in
+Section~\ref{sec:replication}. The former is addressed with status codes in
+server responses based on HTTP status codes. In each of the examples so far, the server's response has
+included a status of 200. Figure~\ref{fig:protocol} shows the dialog between
+clients and server when the server responds with a 409 status code because the
+client's \var{version} parameter is 1, when the server's is 2.
 
 
 
@@ -332,7 +280,9 @@ itself when it is using and old version of the database.
   \path [edge] (s6) -- (s5);
 
 \end{tikzpicture}
-\caption{Synchronization protocol}
+\caption{The resulting dialog between a client and the server caused by a client
+request to \sync that supplied a \var{version} parameter that did not match the
+server's, indicating that the client needs to update its schema.}
 \label{fig:protocol}
 \end{figure}
 
@@ -382,14 +332,5 @@ user name of $tim$ and a password of $password$, the signature would be
 equal to \hbox{$9d64e5fbba865b491adeeeead91666df8d7cb1ec$}.
 
 %TODO recalculate checksum
-
-%begin{figure}[h!]
-%sha1("1StudentsCourses2012-12-01 16:\\
-%8:312012-12-01 16:18:43timn5baa6\\
-%e4c9b93f3f0682250b6cf8331b7ee68fd8") \\
-% 9d64e5fbba865b491adeeeead91666df8d7cb1ec$
-%caption{My Listing}
-%label{fig:list}
-%end{figure}
 
 

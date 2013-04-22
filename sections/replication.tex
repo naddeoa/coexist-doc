@@ -2,29 +2,7 @@
 \section{Database Replication} \label{sec:replication}
 %--------------------------------------------------------
 
-
-%Many database systems support mirroring, or data replication. The driving factor
-%in this technology seems to be data availability: always having a slave database
-%server that can assume the primary role in the event that something goes
-%wrong\cite{microsoft_database_????}. The issue here is that we don't have much
-%control over the development environment; the server side database is MySQL
-%because that is what the staff is familiar with and the client side database is
-%SQLite because that is what Android supports. While MySQL does support data
-%replication to MySQL slave servers, it certainly does not support replication to
-%arbitrary alternative DBMS\cite{mySQL_mySQL_????}.
-
-
-%A simpler approach to this problem involved the addition of \textit{metacolumns}
-%to the original schema; or columns defined in a SQL table that do not
-%traditionally relate to the other columns in that table, but instead are used
-%for some application level purpose. The most important of these metacolumns is
-%the \texttt{mod\_ts} (modification timestamp) column. Let's take a simple
-%relation \hbox{\texttt{Student(id, name, year)}} and examine how it can be
-%synchronized across multiple instances without using any DBMS specific features.
-%In this example, both the client and server tables are initialized to the table
-%in Figure~\ref{fig:student_init}. 
-
-The implementation of \schema reduces to the problem of database replication.
+The implementation of \sync reduces to the problem of database replication.
 As mentioned in Section~\ref{sec:related}, various DBMSs have replication
 functionality, and companies have attempted to mediate the protocols that they
 use in order to enable replication across different DBMSs with varying success.
@@ -34,7 +12,7 @@ have replication features to begin with, which would complicate the likely
 scenario of Android SQLite clients interfacing with a MySQL server database. 
 Instead, a stateless, pure SQL solution is preferred. The remainder of
 this section will describe such an solution and its role in implementing
-the \schema method.
+the \sync method.
 
 
 %--------------------------------------------------------
@@ -282,62 +260,4 @@ discoveries about the client: requests to \create must include a
 parameter per SQL table. This information will be factored into the design of
 the client-server communication model in Section~\ref{sec:communication}
 
-%-------------------------------------------------------
-%\subsection{Schema Implications}
-%\label{sec:schema}
-%
-%% users won't have to create schemas.
-%
-%The synchronization depends on a few assumptions. If a row was deleted from the
-%server then there would be no reliable way for the client to discover this using
-%only the metacolumns. Assuming no insertions have taken place, missing rows
-%would be $C - S$, where $C$ is the client side table and $S$ is the server side,
-%but we would like to avoid sending the contents of entire tables over the
-%network (aside from the initial synchronization). 
-%
-%Many of the relations of our schema include timestamps to enable us to pose more
-%interesting queries. For example, our \texttt{Shelved( serial\_no, date)}
-%relation allows us to tell Networkmaine all of the devices that were shelved in
-%a given time range; in the past, these devices might have been deleted from
-%their records entirely. For this reason, and the reason in the prior paragraph,
-%we decided it would be a good idea to never delete any data from the database.
-%Instead, the \texttt{deleted} metacolumn was added to each relation; a simple
-%boolean toggle that tells the application that this tuple should be considered
-%deleted. This enables our synchronization method and preserves the integrity of
-%queries that rely on having sufficient data to operate on.
-%
-%Another practice to avoid is using relations to store states. In the original
-%schema for Networkmaine, there was a table \hbox{\texttt{Shelved (serial, date,
-%note)}} that was used to track devices that should be considered retired. These
-%devices could potentially be used again and would have to be marked as deleted
-%in the \texttt{Shelved} table with metacolumns. It is also reasonable to assume
-%that the \texttt{Shelved} table's growth will mirror the \texttt{Device} table's
-%growth because each new device will potentially replace an older device. 
-%
-%One possible solution would be to merge the \texttt{Shelved} table into the
-%\texttt{Device} table. In MySQL, a \texttt{BOOLEAN} occupies 1 byte, a
-%\texttt{TIMESTAMP} occupies 4 bytes, and \texttt{VARCHAR} occupies at least 0
-%bytes and at most 3 bytes per character in utf-8 under the InnoDB engine. The
-%initial database will have about six thousand devices in it, so merging the
-%tables would add about $6000~bytes + 24000~bytes + 625~bytes \approx 30~kb$, or
-%5 bytes per row, where the $625~bytes$ came from the sum off all of the 1 bit
-%bitmasks added for allowing \texttt{NULL} values in the \texttt{VARCHAR} column;
-%a negligible amount for the small growth rate of the database. The updated table
-%is shown in figure~\ref{fig:updated_device}.
-%
-% 
-%\begin{figure}[h!]
-%\begin{lstlisting}[language=sql]
-%CREATE TABLE Device(
-%  serial VARCHAR(32) PRIMARY KEY,
-%  tag VARCHAR(32) NOT NULL,
-%  description VARCHAR(32),
-%  shelved BOOL DEFAULT FALSE NOT NULL,
-%  shelved_notes VARCHAR(32),
-%  shelved_date TIMESTAMP);
-%\end{lstlisting}
-%\caption{Updated \texttt{Device} table.}
-%\label{fig:updated_device}
-%\end{figure}
-%
 
