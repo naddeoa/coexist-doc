@@ -39,6 +39,14 @@ server and all other clients. From here, we can discuss the details of the four
 API methods, starting with \schema in Figure~\ref{fig:request_schema}. 
 
 
+%--------------------------------------------------------
+\subsection{Request and response structure}  \label{sec:}
+
+In Coexist, client-server communication happens through four API methods.  This
+section describes the parameters that clients are required to send in each
+request and the responses they can expect from the server. In figures, requests
+are shown as query strings with JSON values and responses are JSON objects. The
+first API method is \schema in Figure~\ref{fig:request_schema}.
 
 \begin{figure}[h!]
 \begin{subfigure}[b]{0.23\textwidth}
@@ -70,7 +78,9 @@ order to fulfil its request is the type of database that it uses, so the only
 required parameter is \var{db}. In this example, the client uses a SQLite
 database, so it passes a value of \var{sqlite} for the \var{db} parameter.
 Currently, Coexist doesn't take advantage of any non-standard SQL features
-\var{db} isn't actually used, but that may change in the future. 
+\var{db} isn't actually used, but that may change in the future. The \metamodel
+request is identical to the \schema request, but its response returns a JSON
+based metamodel, described in Section~\ref{sec:metamodel}.
 
 The response from the server contains an obligatory \var{status} and
 \var{message} parameter, followed by the current version of the server side
@@ -199,7 +209,7 @@ general, clients send a \var{version} and \var{sync} parameter, where \var{sync}
 contains an object that maps table names to arrays of objects that should be added
 to the server side database. If there are no issues adding the row, then the
 server replies with a 200 status code and the client is free to call \sync to
-bring the new rows into its local storage.
+bring the new rows into its local storage. 
 
 The examples in this section so far have assumed that requests are successful.
 In reality, there are a few scenarios where clients can run into conflicts,
@@ -211,8 +221,8 @@ namely when
 The latter was addressed in Figure~\ref{fig:create} in
 Section~\ref{sec:replication}. The former is addressed with status codes in
 server responses based on HTTP status codes. In each of the examples so far, the server's response has
-included a status of 200. Figure~\ref{fig:protocol} shows the dialog between
-clients and server when the server responds with a 409 status code because the
+included a status of 200. Figure~\ref{fig:protocol} shows the dialog between a
+client and the server when the server responds with a 409 status code because the
 client's \var{version} parameter is 1, when the server's is 2.
 
 
