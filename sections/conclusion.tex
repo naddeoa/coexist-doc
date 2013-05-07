@@ -1,15 +1,34 @@
-%
-%%--------------------------------------------------------
-%\section{Conclusion} \label{sec:conclusion}
-%%--------------------------------------------------------
-%
-%Much of the setup work can be reduced to simple script execution. In the end,
-%Coexist will be configurable through a dedicated tool that pulls down the latest
-%stable code from whichever repository it is currently being hosted at and
-%automatically configures it based on a name, domain, icon and server
-%information.
 
-%tools to auto generate JSON from SQL, or vice versa
+%--------------------------------------------------------
+\section{Conclusion} \label{sec:conclusion}
+%--------------------------------------------------------
 
+%state the problem again
+
+%state the solution as an API based data access model
+
+%state the solution to each of the problems presented in section I
+
+%state future plans
+
+%cya!
+
+
+
+This paper focused on the questions presented in Section~\ref{sec:api}:
+\begin{inparaenum}
+\item\label{enum:datac} what the data exchange format between clients and the server will be, 
+\item\label{enum:syncc} how to synchronize data, and
+\item\label{enum:metac} how to tell clients to display the synced data to users. 
+\end{inparaenum}
+Section~\ref{sec:communication} addressed question~\ref{enum:datac} by modeling a
+communication protocol between the server and clients in Coexist.
+Section~\ref{sec:replication} addressed question~\ref{enum:syncc} by defining a
+method of replicating databases across different instances. This method utilizes
+metacolumns like \var{mod\_ts} and \var{deleted} to determine the contents that
+need to be pulled down from the server to each of the clients. Finally,
+question~\ref{enum:metac} was answered in Section~\ref{sec:metamodel} by
+defining a JSON based metamodel that maps database information to user interface
+information.
 
 

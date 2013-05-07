@@ -157,27 +157,28 @@
 
 
 \begin{abstract}
-CRUD applications are those that enable users to create, read, update and delete
-data from some specified data set, often a relational database. The
-differences between CRUD applications lie primarily in the data that they
-manage, not in features or expectations. We present a model for representing the
-relationship between the standard CRUD operations and the data that is being
-managed. With this model, it is possible to write a single CRUD application that
-can be used to manage any set of data that uses a relational database. We define
-a protocol that enables arbitrary amounts and types of clients to perform CRUD
-operations on the same database. We also present a protocol for replicating
-database instances across arbitrary DBMSs. These ideas have been combined into
-one easily deployable system that can be used to create and maintain CRUD
-applications without writing client source code.
+There is a class of applications that allow users to create, read, update and
+delete data from some data management system (often times a relational
+database). The differences between these applications lie primarily in type of
+data that they manage, not in expectations or functionality. Many frameworks
+have emerged to solve the problem of creating data access applications without
+having to code from scratch every time, but most of them focus exclusively on
+web systems with browser clients. Today, the majority of our computer-centric
+time is dedicated to mobile phones and tablets, and eventually our attention
+will move elsewhere. In this paper, we present a minimalist data access system,
+Coexist, that is designed to allow any web enabled client to perform typical
+data access operations, regardless of their platform. Coexist uses a
+client-server model, a JSON metamodel and a simple build process to create
+a server side API and installable client packages (Android for example).
 \end{abstract}
 
+
 \begin{IEEEkeywords}
-Android, CRUD, meta model, database replication
+Android, CRUD, metamodel, database replication, API
 \end{IEEEkeywords}
 
 \IEEEpeerreviewmaketitle
 \tableofcontents
-
 
 
 \input{sections/intro.tex}
