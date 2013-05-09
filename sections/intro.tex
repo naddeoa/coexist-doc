@@ -5,22 +5,21 @@
 
 
 
-
-
-The term CRUD refers to the four basic operations on persistent storage: create,
-read, update and delete. Many CRUD focused applications implement their
+A data access application is one that enables users to interface with
+persistent storage through create, read, update and delete operations. Many data
+access applications implement their
 persistence layers using relational databases. Of these applications, many
-require multiple users to be able to perform CRUD operations on the same
+require multiple users to be able to perform manage the same
 database from arbitrary client types (Android, Web
-etc.). The data managed by CRUD applications varies greatly, but functionality
+etc.). The data managed by these applications varies greatly, but functionality
 and user interfaces are largely the same across instances. For this reason,
-there have been many frameworks that aid developers in creating their own CRUD
+there have been many frameworks that aid developers in creating their own 
 applications, but most of them require the programmer to write code (i.e. PHP or
 Java) in order to generate entire applications that can be installed or placed
 on a Web server; this quickly complicates an otherwise simple application. 
 
 The use of a framework should be a categorically simpler experience than
-building a CRUD application from scratch. Currently, the framework that best
+building an application from scratch. Currently, the framework that best
 meets this requirement is called Evolutility. Evolutility
 is effective because the programmer only has to create XML configuration files
 that describe UI forms that are generated at run time. This approach results in
@@ -30,7 +29,7 @@ particularly in its lack of native mobile application support (Android
 specifically) and its dependency on proprietary Microsoft technology (as opposed
 to open standards like Apache, PHP and MySQL). 
 
-In this paper, we expand the generic CRUD application model described by
+In this paper, we expand the generic data access model described by
 Giulieri to enable arbitrary client types and support mobile clients by adding
 features like database replication for off line
 reading\cite{giulieri_minimalist_2011}. This project was originally an inventory
@@ -85,7 +84,7 @@ code modification.
 
 It is also reasonable to assume that Networkmaine may have a need to track
 something entirely unrelated to networking devices (enrollment information
-perhaps). Additional instances of CRUD applications should be easy to configure
+perhaps). Additional instances of applications should be easy to configure
 and deploy.
 
 
@@ -104,16 +103,20 @@ and deploy.
 % explain JSON stuff based on evolutility
 
 
-We are interested in creating a generic CRUD system that shares a single database among arbitrary amounts (and types) of clients. In order to be effective, it must 
+We are interested in creating a generic data access system that shares a single database among arbitrary amounts (and types) of clients. In order to be effective, it must 
 \begin{inparaenum}
-\item be easier to use than creating a CRUD application,
+\item be easier to use than creating an application,
 \item allow off line reading on mobile clients,
 \item have easily deployable instances for different databases and
 \item never require source code modification for updates
 \end{inparaenum}
-In order to meet these requirements, we must have a way of replicating databases across arbitrary DBMS, isolate the parts of application instances that need to be customized (i.e. name and icon), and describe the UI enough for clients to display lists and forms that enable CRUD operations. Giulieri summarized his efforts well in his entry into the Code Generator 2008 Competition\cite{giulieri_minimalist_2011}
+In order to meet these requirements, we must have a way of replicating databases
+across arbitrary DBMS, isolate the parts of application instances that need to
+be customized (i.e. name and icon), and describe the UI enough for clients to
+display lists and forms that enable data access operations. Giulieri summarized his efforts well in his entry into the Code Generator 2008 Competition\cite{giulieri_minimalist_2011}
 \begin{quotation}
-``We argue that the key concept here is the representation of UI Metadata and that with a proper set of fundamental UI widgets, most CRUD applications can be effectively designed without hand coding.''
+``We argue that the key concept here is the representation of UI Metadata and
+that with a proper set of fundamental UI widgets, most data access applications can be effectively designed without hand coding.''
 \end{quotation}
 We use Giulieri's Evolutility\cite{giulieri_evolutility_????} project as a starting point. Evolutility consists of various .aspx pages and dlls that need to be copied to a Web server, along with some SQL scripts that need to be run to create tables that store meta data. Once the initial configuration is done, an XML file can be created that specifies the relation between fields on forms and entities in the database. The XML file format is specified in his Code Generator 2008 Competition entry\cite{giulieri_minimalist_2011}. 
 
@@ -135,7 +138,7 @@ responsibility.
 \begin{itemize}
 \item \textbf{/api/sync}: Provides clients with the rows of the database that they are missing based on timestamp information.
 \item \textbf{/api/schema}: Sends SQL to the client that creates the necessary tables on its local database. The DBMS type must be supplied in requests (i.e. SQLite).
-\item \textbf{/api/crud}: Sends the JSON model to the client so that it can create UI forms.
+\item \textbf{/api/metamodel}: Sends the JSON model to the client so that it can create UI forms.
 \item \textbf{/api/create}: Creates or updates rows on the server. These rows are retrievable through calls to /api/sync.
 \end{itemize}
 
@@ -165,10 +168,10 @@ that were encountered and rejected for various reasons. Android Crud Code
 Generator (ACCG)\cite{popovski_android-crud-code-generator_????} and
 Phreeze\cite{hinkle_phreeze_????} are representative of the kinds of projects
 that we were finding. The first is targeted at Android and the second is PHP,
-but both of them aim to make the CRUD experience simpler. Phreeze is a polished
+but both of them aim to make the development experience simpler. Phreeze is a polished
 application, but it requires users to write code during the "development"
 process, which violated our requirements. ACCG took a different approach. It
-generates all of the Java code that would be needed when making a CRUD
+generates all of the Java code that would be needed when making a data access
 application. This is similar from a user perspective, but we ultimately want to
 have one code base that never has to be modified; not to mention, it is strictly
 local storage. OpenMobster's CRUD
@@ -205,17 +208,16 @@ The idea is to use authentication tokens in place of passwords so that third
 party applications can access someone's information by making requests with
 tokens instead of passwords. For the purposes of Networkmaine, there will be no
 third party plug in service and all users access the same information over SSL.
-Storing local password hashes or requesting passwords per transaction (depending
-on us
+Storing local password hashes or requesting passwords per transaction.
 
 %--------------------------------------------------------
 \subsection{Outline of Paper} \label{sec:outline}
 
 
-The remainder of this paper is organized as follows. Section~\ref{sec:xml}
+The remainder of this paper is organized as follows. Section~\ref{sec:metamodel}
 reviews the XML-based meta-model presented by Giulieri and
-Section~\ref{sec:json} introduces the JSON version of it used by Coexist.
-Section~\ref{sec:db} describes the protocol used to enable database replication
+introduces the JSON version of it used by Coexist.
+Section~\ref{sec:replication} describes the protocol used to enable database replication
 across arbitrary DBMSs. In Section~\ref{sec:api}, we take a closer look at the
 structure of the Web server and API, and what interaction with clients will look
 like. Section~\ref{sec:deployment} examines the system as a whole from the end

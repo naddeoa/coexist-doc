@@ -430,6 +430,7 @@ The equivalence of these three SQL samples implies that \term{modelgen} would be
 many-to-one function if it took SQL and produced a metamodel.
 Figure~\ref{fig:metamodel_json_convert1} shows the relevant portion of the
 metamodel that would represent each of the three SQL samples equally.
+Designing \term{modelgen} to take SQL and produce a metamodel poses several problems.
 
 \begin{figure}[h!]
 \begin{lstlisting}[language=json]
@@ -451,27 +452,20 @@ samples in Figure~\ref{fig:metamodel_sql}.}
 \label{fig:metamodel_json_convert1}
 \end{figure}
 
-Designing \term{modelgen} to take SQL and produce a metamodel poses several problems.
-This section will reference SQL and metamodel types repeatedly, so as shorthand,
-a SQL integer type will be written as \sql{integer}, and a metamodel integer
-type will be written as \mm{integer}.
 
-
-%--------------------------------------------------------
 %\subsubsection{$f : type_{SQL} \rightarrow type_{metamodel}$ is not surjective}
 \subsubsection{Mapping SQL types to metamodel types is not surjective}
 \label{sec:metamodel_issue1}
 
 The mapping from SQL syntax to metamodel syntax is surjective, but the
 mapping from SQL types to metamodel types is not. For example, \var{id} in
-Figure~\ref{fig:metamodel_sql} is a \sql{integer}, but the metamodel defines
-\mm{integer}, and \mm{barcode}, the latter of which is essentially an
-\mm{integer}, but allows clients to present a barcode scanner for user input (if
-they support it). This means that \term{modelgen} would have to default the conversion
-from \sql{integer} to \mm{integer}, and it would never produce a metamodel with
-a \mm{barcode} in it. A similar situation occurs when converting a
-\sql{varchar}; it can be represented as a \mm{text}, \mm{email}, or
-\mm{textbox}.
+Figure~\ref{fig:metamodel_sql} is an integer, but the metamodel defines
+integer, and barcode, the latter of which is essentially an
+integer, but allows clients to present a barcode scanner for user input (if
+they support it). This means that \var{modelgen} would have to default the conversion
+from SQL integer to an integer, and it would never produce a metamodel with
+a barcode in it. A similar situation occurs when converting a
+varchar; it can be represented as a text, email, or textbox.
 
 
 %--------------------------------------------------------
